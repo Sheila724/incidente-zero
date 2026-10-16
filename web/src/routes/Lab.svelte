@@ -35,6 +35,7 @@
   let stopping = $state(false);
 
   let now = $state(Date.now());
+  let nextId = $state(null);
 
   const sc = $derived(detail?.scenario);
   const sv = $derived(sev(sc?.severity));
@@ -156,6 +157,9 @@
       const r = await api.check(id);
       check = r;
       if (r.passed && r.result) result = r.result;
+      if (r.passed) {
+        api.scenarios().then((l) => (nextId = l.next && l.next !== id ? l.next : null)).catch(() => {});
+      }
       if (r.passed && !r.result && !result) result = { seconds: elapsed ?? 0, hints: hintsRevealed, points: null };
     } catch (e) {
       check = { passed: false, items: [{ ok: false, text: e.message }], at: Date.now() };
@@ -349,7 +353,11 @@
           {#if result.solutionViewed}<p class="faint small">A solução foi aberta antes da correção, então esta tentativa não pontua.</p>{/if}
           <div class="result-actions">
             <button type="button" class="btn btn-primary" onclick={() => loadSolution(true)}>Ver solução e causa raiz</button>
-            <a class="btn" href="#/">Voltar à central</a>
+            {#if nextId}
+              <a class="btn" href={`#/lab/${nextId}`}>Próximo incidente</a>
+            {:else}
+              <a class="btn" href="#/">Voltar à central</a>
+            {/if}
           </div>
         </div>
       {/if}
