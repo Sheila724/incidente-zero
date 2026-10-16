@@ -56,8 +56,8 @@ Dentro do lab, investigue e corrija. Depois:
 | ID | Nível | Trilha | Incidente | Status |
 |---|---|---|---|---|
 | 001 | Iniciante | Linux | Disco cheio em `/var/log` | ✅ |
-| 002 | Iniciante | Linux | Nginx não sobe | 🚧 |
-| 003 | Iniciante | Linux | Permissão negada no site | 🚧 |
+| 002 | Iniciante | Linux | Nginx não sobe após deploy | ✅ |
+| 003 | Iniciante | Linux | Permissão negada após hardening | ✅ |
 | 004 | Iniciante | Linux | Processo consumindo 100% de CPU | 🚧 |
 | 005 | Iniciante | Linux | Porta já em uso | 🚧 |
 | 006 | Iniciante | Linux | Cron que não executa | 🚧 |
