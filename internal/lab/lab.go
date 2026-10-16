@@ -67,6 +67,15 @@ func Start(s *scenario.Scenario) error {
 		if m.Type != "tmpfs" {
 			return fmt.Errorf("tipo de mount não suportado: %s", m.Type)
 		}
+		if m.Inodes > 0 {
+			// --mount não aceita nr_inodes; --tmpfs aceita as opções do kernel
+			opts := "rw,mode=755,nr_inodes=" + strconv.Itoa(m.Inodes)
+			if m.Size != "" {
+				opts += ",size=" + m.Size
+			}
+			args = append(args, "--tmpfs", m.Path+":"+opts)
+			continue
+		}
 		mount := "type=tmpfs,destination=" + m.Path
 		if m.Size != "" {
 			mount += ",tmpfs-size=" + m.Size

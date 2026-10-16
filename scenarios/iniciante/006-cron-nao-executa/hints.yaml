@@ -1,0 +1,21 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Rodado na mão, o script de backup funciona. Então o problema está em quem
+      deveria chamá-lo. O cron está realmente executando esse agendamento?
+      O journal do cron registra cada execução.
+
+  - level: 2
+    cost: 20
+    text: >
+      O cron ignora arquivos do /etc/cron.d com certos caracteres no nome, como o
+      ponto. E, dentro de uma linha do cron, o caractere `%` tem um significado
+      especial. Leia `man 5 crontab`.
+
+  - level: 3
+    cost: 40
+    text: >
+      Renomeie /etc/cron.d/backup-loja.cron para /etc/cron.d/backup-loja e, na
+      linha do agendamento, troque `%F` por `\%F` (ou tire o `date` da linha).
+      Espere até 2 minutos e confira com `ls -lt /var/backups/loja`.

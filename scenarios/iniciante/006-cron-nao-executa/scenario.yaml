@@ -1,0 +1,69 @@
+apiVersion: incidente-zero/v1
+
+id: 006-cron-nao-executa
+title: "Backup agendado que não executa"
+level: iniciante
+track: linux
+estimated_minutes: 20
+tags: [cron, agendamento, backup, journalctl, shell]
+
+learning_objectives:
+  - Ler e escrever linhas de agendamento do cron
+  - Saber onde ficam os agendamentos (crontab, /etc/cron.d)
+  - Conhecer a regra de nomes de arquivo do /etc/cron.d
+  - Entender por que % precisa de escape numa linha do cron
+  - Usar o journal do cron para confirmar execuções
+  - Validar um backup, e não só a existência do arquivo
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-db-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: media
+  source: monitoramento
+  title: "Backup mais recente da loja tem 3 dias"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Veja os backups existentes: `ls -lt /var/backups/loja`."
+  - title: Teste o script na mão
+    text: "Rode `sudo /usr/local/bin/backup-loja.sh`. O script em si funciona?"
+  - title: Encontre o agendamento
+    text: "Procure onde o backup é agendado: `ls -l /etc/cron.d/` e `sudo crontab -l`."
+  - title: Confirme se o cron está lendo o arquivo
+    text: "Veja o que o cron executou: `journalctl -u cron --since '-10 min'`. O backup aparece?"
+  - title: Corrija o nome do arquivo
+    text: "Leia a seção sobre /etc/cron.d no `man cron`. Que nomes ele ignora?"
+    verify: "grep -l 'backup-loja.sh' /etc/cron.d/* 2>/dev/null | xargs -r -n1 basename | grep -Eq '^[A-Za-z0-9_-]+$'"
+  - title: Corrija a linha do agendamento
+    text: "Agora o cron executa, mas o backup ainda falha. O que o `%` significa para o cron?"
+    verify: "f=$(grep -l 'backup-loja.sh' /etc/cron.d/* 2>/dev/null | head -1); [ -n \"$f\" ] && ! grep 'backup-loja.sh' \"$f\" | grep -Eq '(^|[^\\\\])%'"
+  - title: Espere o próximo ciclo e valide
+    text: "O agendamento roda a cada 2 minutos. Confira um backup novo e válido com `tar -tzf`."
+    verify: "[ -n \"$(find /var/backups/loja -name 'loja-*.tar.gz' -mmin -5 2>/dev/null | head -1)\" ]"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 12

@@ -419,6 +419,10 @@ func (s *Server) metrics(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// docker stats mede em % de um núcleo; mostramos em % do limite do lab
+	if c := sc.Resources.CPUs; c > 0 {
+		m.CPUPercent = min(m.CPUPercent/c, 100)
+	}
 	writeJSON(w, http.StatusOK, m)
 }
 

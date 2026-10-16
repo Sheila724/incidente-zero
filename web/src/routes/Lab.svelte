@@ -208,7 +208,8 @@
   const monitors = $derived.by(() => {
     if (!metrics) return [];
     const ok = /^[23]/.test(metrics.httpCode);
-    const diskColor = metrics.diskPercent >= 90 ? 'var(--red)' : metrics.diskPercent >= 80 ? 'var(--violet)' : 'var(--blue)';
+    const diskWorst = Math.max(metrics.diskPercent, metrics.inodePercent ?? 0);
+    const diskColor = diskWorst >= 90 ? 'var(--red)' : diskWorst >= 80 ? 'var(--violet)' : 'var(--blue)';
     return [
       { label: 'HTTP /', value: metrics.httpCode, color: ok ? 'var(--green)' : 'var(--red)', series: series.http, max: 100,
         sub: ok ? 'respondendo' : metrics.httpCode === '000' ? 'sem resposta' : 'erro no servidor' },
@@ -219,7 +220,8 @@
       { label: 'Memória', value: `${metrics.memPercent.toFixed(0)}%`, color: metrics.memPercent >= 90 ? 'var(--red)' : 'var(--blue)',
         series: series.mem, max: 100, sub: metrics.memUsage || '' },
       { label: `Disco ${metrics.diskPath || '/'}`, value: `${metrics.diskPercent}%`, color: diskColor,
-        series: series.disk, max: 100, sub: metrics.diskPercent >= 90 ? 'quase cheio' : 'uso da partição' }
+        series: series.disk, max: 100,
+        sub: metrics.inodePercent >= 90 ? `inodes: ${metrics.inodePercent}%` : metrics.diskPercent >= 90 ? 'quase cheio' : `inodes: ${metrics.inodePercent ?? 0}%` }
     ];
   });
 </script>

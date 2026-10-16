@@ -71,18 +71,18 @@ Dentro do lab, investigue e corrija. Depois:
 | 001 | Iniciante | Linux | Disco cheio em `/var/log` | ✅ |
 | 002 | Iniciante | Linux | Nginx não sobe após deploy | ✅ |
 | 003 | Iniciante | Linux | Permissão negada após hardening | ✅ |
-| 004 | Iniciante | Linux | Processo consumindo 100% de CPU | 🚧 |
-| 005 | Iniciante | Linux | Porta já em uso | 🚧 |
-| 006 | Iniciante | Linux | Cron que não executa | 🚧 |
-| 007 | Iniciante | Linux | SSH recusando a chave | 🚧 |
-| 008 | Iniciante | Linux | "Disco cheio" com espaço sobrando | 🚧 |
+| 004 | Iniciante | Linux | Processo consumindo 100% de CPU | ✅ |
+| 005 | Iniciante | Linux | Porta 80 ocupada por outro processo | ✅ |
+| 006 | Iniciante | Linux | Backup agendado que não executa | ✅ |
+| 007 | Iniciante | Linux | SSH recusando a chave do deploy | ✅ |
+| 008 | Iniciante | Linux | "Disco cheio" com espaço sobrando | ✅ |
 
 ## Roadmap
 
 - [x] Imagem base com systemd
 - [x] Cenário 001 completo
 - [x] CLI `iz`
-- [ ] Trilha iniciante completa (001–008)
+- [x] Trilha iniciante completa (001–008)
 - [x] Interface web com terminal no navegador
 - [ ] Trilha intermediária: rede, web, banco e **Zabbix**
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata

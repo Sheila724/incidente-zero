@@ -53,6 +53,7 @@ type Metrics struct {
 	MemUsage    string  `json:"memUsage"`
 	DiskPercent int     `json:"diskPercent"`
 	DiskPath    string  `json:"diskPath"`
+	InodePct    int     `json:"inodePercent"`
 	At          int64   `json:"at"`
 }
 
@@ -60,16 +61,23 @@ const probeScript = `
 code=$(curl -s -o /dev/null -m 2 -w '%{http_code}' http://localhost/ 2>/dev/null)
 echo "http=${code:-000}"
 if ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq '(^|:)80$'; then echo "port80=1"; else echo "port80=0"; fi
-p=/var/log; mountpoint -q /var/log 2>/dev/null || p=/
+p=__DISK__; mountpoint -q "$p" 2>/dev/null || p=/
 echo "diskpath=$p"
 echo "disk=$(df --output=pcent "$p" 2>/dev/null | tail -1 | tr -dc 0-9)"
+echo "inodes=$(df --output=ipcent "$p" 2>/dev/null | tail -1 | tr -dc 0-9)"
 `
 
 // Collect lê HTTP, porta 80 e disco de dentro do lab, e CPU/memória do docker stats.
 func Collect(s *scenario.Scenario) (Metrics, error) {
 	m := Metrics{At: time.Now().UnixMilli(), HTTPCode: "000"}
 
-	out, _, err := Exec(s, probeScript, 6*time.Second)
+	// Disco monitorado: a primeira partição tmpfs do cenário (é ela que os incidentes enchem)
+	disk := "/var/log"
+	if len(s.Resources.Mounts) > 0 {
+		disk = s.Resources.Mounts[0].Path
+	}
+	script := strings.Replace(probeScript, "__DISK__", strconv.Quote(disk), 1)
+	out, _, err := Exec(s, script, 6*time.Second)
 	if err != nil {
 		return m, err
 	}
@@ -88,6 +96,8 @@ func Collect(s *scenario.Scenario) (Metrics, error) {
 			m.DiskPercent, _ = strconv.Atoi(v)
 		case "diskpath":
 			m.DiskPath = v
+		case "inodes":
+			m.InodePct, _ = strconv.Atoi(v)
 		}
 	}
 
