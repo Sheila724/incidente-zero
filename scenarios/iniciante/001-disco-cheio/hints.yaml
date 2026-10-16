@@ -1,0 +1,20 @@
+# Dicas progressivas: da mais vaga à mais direta. "cost" desconta pontos no modo plantão.
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O erro aparece no site, mas a causa pode não estar no nginx nem no código.
+      Pergunte-se: do que uma aplicação precisa para funcionar além de CPU e memória?
+
+  - level: 2
+    cost: 20
+    text: >
+      `df -h` mostra QUAL partição encheu. `sudo du -sh /var/log/* | sort -h`
+      mostra O QUE está ocupando. Depois descubra QUEM escreve esse arquivo e POR QUÊ.
+
+  - level: 3
+    cost: 40
+    text: >
+      A aplicação está com LOG_LEVEL=DEBUG em /etc/app/app.conf. Volte para INFO,
+      reinicie com `sudo systemctl restart app` e esvazie o arquivo com
+      `sudo truncate -s 0 /var/log/app/debug.log`.

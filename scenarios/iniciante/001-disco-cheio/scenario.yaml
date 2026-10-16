@@ -1,0 +1,80 @@
+# Cenário de referência do Incidente Zero.
+# Use este arquivo como modelo para criar novos cenários.
+
+apiVersion: incidente-zero/v1
+
+id: 001-disco-cheio
+title: "Disco cheio em /var/log"
+level: iniciante            # iniciante | intermediario | avancado
+track: linux                # linux | rede | web | banco | docker | zabbix | kubernetes
+estimated_minutes: 20
+tags: [disco, logs, systemd, df, du, logrotate]
+
+learning_objectives:
+  - Identificar qual sistema de arquivos encheu com df
+  - Encontrar o que ocupa espaço com du e ls
+  - Relacionar um arquivo de log ao serviço que o gera
+  - Liberar espaço com segurança (truncate x rm)
+  - Corrigir a causa raiz, não só o sintoma
+  - Prevenir a recorrência com logrotate
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []                # ex.: [zabbix] para cenários com monitoramento real
+resources:
+  cpus: 0.5
+  memory: 512m
+  pids: 512
+  mounts:
+    # partição pequena e isolada: o "disco cheio" nunca enche o host
+    - type: tmpfs
+      path: /var/log
+      size: 300m
+
+alert:
+  severity: alta            # baixa | media | alta | critica
+  source: monitoramento
+  title: "Loja Exemplo retornando HTTP 503"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh     # ambiente saudável
+  inject: scripts/inject.sh   # injeta a falha
+  check: scripts/check.sh     # exit 0 = resolvido
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Antes de mexer em qualquer coisa, reproduza o problema: `curl -i http://localhost`."
+  - title: Descubra qual partição encheu
+    text: "Use `df -h` e procure um sistema de arquivos com uso próximo de 100%."
+  - title: Encontre o que ocupa espaço
+    text: "Dentro da partição cheia, use `sudo du -sh /var/log/* | sort -h` e desça nos diretórios até achar o arquivo."
+  - title: Descubra por que o arquivo cresce
+    text: "Veja as últimas linhas com `tail`, identifique o serviço (`systemctl status app`) e leia a configuração dele em /etc/app/app.conf."
+  - title: Corrija a causa
+    text: "Volte o nível de log para INFO e reinicie o serviço."
+    verify: "grep -Eq '^LOG_LEVEL=(INFO|WARNING|ERROR)' /etc/app/app.conf"
+  - title: Libere o espaço
+    text: "Esvazie o arquivo com `truncate -s 0` e confira o `df -h` de novo."
+    verify: "[ $(df --output=pcent /var/log | tail -1 | tr -dc '0-9') -lt 80 ]"
+  - title: Valide o serviço
+    text: "O site precisa voltar a responder 200."
+    verify: "[ \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)\" = 200 ]"
+  - title: "Bônus: evite que aconteça de novo"
+    text: "Crie uma regra de rotação em /etc/logrotate.d/app."
+    verify: "test -f /etc/logrotate.d/app"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 10
