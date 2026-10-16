@@ -1,0 +1,72 @@
+apiVersion: incidente-zero/v1
+
+id: 003-permissao-negada
+title: "Permissão negada após hardening"
+level: iniciante
+track: linux
+estimated_minutes: 25
+tags: [permissões, chmod, chown, nginx, systemd-timer, segurança]
+
+learning_objectives:
+  - Ler permissões com ls -l e namei e entender usuário, grupo e outros
+  - Descobrir com qual usuário um serviço roda
+  - Diferenciar o x de pasta (atravessar) do r de arquivo (ler)
+  - Usar o error.log para explicar um 403 ou 404
+  - Encontrar tarefas agendadas com systemctl list-timers
+  - Corrigir acesso sem abrir permissões além do necessário
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: alta
+  source: monitoramento
+  title: "Loja Exemplo retornando HTTP 403"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Teste `curl -I http://localhost/`, `curl -I http://localhost/produtos/` e `curl -I http://localhost/img/logo.svg`. Os códigos são iguais?"
+  - title: Leia o log de erros do nginx
+    text: "Use `sudo tail -n 20 /var/log/nginx/error.log`. O que significa o erro 13?"
+  - title: Descubra quem é o nginx
+    text: "Veja com qual usuário os processos do nginx rodam: `ps -o user,cmd -C nginx`."
+  - title: Inspecione as permissões
+    text: "Use `ls -ld /var/www/loja` e `namei -l /var/www/loja/index.html`. O usuário do nginx consegue passar por cada pasta?"
+  - title: Restaure o acesso
+    text: "Dê ao nginx o acesso mínimo necessário para ler o site."
+    verify: "[ \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)\" = 200 ]"
+  - title: Encontre o que mudou as permissões
+    text: "Algo alterou as permissões e pode fazer isso de novo. Investigue com `systemctl list-timers`."
+  - title: Corrija a causa
+    text: "Ajuste o script de hardening para atender a auditoria sem bloquear o nginx."
+    verify: "grep -q 'www-data' /usr/local/bin/hardening-web.sh || ! systemctl is-active --quiet hardening-web.timer"
+  - title: "Bônus: segurança mantida"
+    text: "Site no ar, timer ativo e nenhum arquivo legível por 'outros'."
+    verify: "systemctl is-active --quiet hardening-web.timer && [ -z \"$(find /var/www/loja -perm /o+r | head -1)\" ]"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 12

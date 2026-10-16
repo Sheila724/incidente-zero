@@ -1,0 +1,23 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Os arquivos existem, mas o nginx diz que não pode servi-los. O log de erros
+      do nginx conta o motivo: veja /var/log/nginx/error.log. E repare que o
+      problema voltou depois que você achou que tinha resolvido?
+
+  - level: 2
+    cost: 20
+    text: >
+      O nginx roda como www-data, que para /var/www/loja é "outros". Compare
+      `ls -ld /var/www/loja` com o que ele precisa: x para atravessar pastas e
+      r para ler arquivos. Depois rode `systemctl list-timers` e procure algo
+      que mexe em /var/www.
+
+  - level: 3
+    cost: 40
+    text: >
+      O timer hardening-web roda /usr/local/bin/hardening-web.sh a cada 2 minutos.
+      Troque no script `deploy:deploy` por `deploy:www-data` e `o-rwx` por
+      `u=rwX,g=rX,o=`. Depois rode `sudo systemctl start hardening-web.service`
+      e teste com curl.
