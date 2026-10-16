@@ -1,0 +1,20 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O curl não recebe nem um erro HTTP: a conexão é recusada. Isso significa
+      que nada está escutando na porta 80. Por que o servidor web não estaria rodando?
+
+  - level: 2
+    cost: 20
+    text: >
+      `systemctl status nginx` mostra que o serviço falhou ao iniciar. Rode
+      `sudo nginx -t`: ele aponta o arquivo e a linha exata do erro. Corrija e
+      rode de novo, pode haver mais de um problema.
+
+  - level: 3
+    cost: 40
+    text: >
+      Em /etc/nginx/sites-available/promo, falta o ";" no fim da linha do listen,
+      e o site promo também se declara default_server, que já é o site da loja.
+      Deixe a linha como `listen 80;`, rode `sudo nginx -t` e `sudo systemctl start nginx`.

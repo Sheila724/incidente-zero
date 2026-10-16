@@ -1,0 +1,71 @@
+apiVersion: incidente-zero/v1
+
+id: 002-nginx-nao-sobe
+title: "Nginx não sobe após deploy"
+level: iniciante
+track: linux
+estimated_minutes: 20
+tags: [nginx, systemd, configuração, deploy, journalctl]
+
+learning_objectives:
+  - Diferenciar "serviço fora do ar" de "serviço respondendo com erro"
+  - Ler o motivo da falha com systemctl status e journalctl
+  - Validar a configuração com nginx -t antes de reiniciar
+  - Entender sites-available, sites-enabled e default_server
+  - Decidir entre corrigir ou fazer rollback de uma mudança
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Loja Exemplo inacessível (conexão recusada)"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Rode `curl -i http://localhost`. Repare: não é um erro HTTP, é a conexão que é recusada."
+  - title: Veja o estado do serviço
+    text: "Use `systemctl status nginx` e `journalctl -u nginx -n 30`."
+  - title: Teste a configuração
+    text: "Rode `sudo nginx -t`. Ele diz o arquivo e a linha do problema."
+    verify: "nginx -t 2>&1 | grep -q 'sites-enabled/promo' || nginx -t >/dev/null 2>&1"
+  - title: Corrija o primeiro erro
+    text: "Abra o arquivo indicado e corrija a linha apontada. Depois rode `sudo nginx -t` de novo."
+    verify: "grep -Eq '^\\s*listen\\s+80[^;]*;' /etc/nginx/sites-available/promo || [ ! -e /etc/nginx/sites-enabled/promo ]"
+  - title: Corrija o segundo erro
+    text: "Só pode haver um `default_server` por porta. Qual dos dois sites deve ser o padrão?"
+    verify: "nginx -t >/dev/null 2>&1"
+  - title: Suba o nginx e valide
+    text: "`sudo systemctl start nginx` e teste com `curl http://localhost`."
+    verify: "systemctl is-active --quiet nginx"
+  - title: "Bônus: publique a promo corretamente"
+    text: "Teste com `curl -H 'Host: promo.loja.local' http://localhost`."
+    verify: "curl -s -H 'Host: promo.loja.local' http://localhost/ | grep -q 'Black Friday'"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 10
