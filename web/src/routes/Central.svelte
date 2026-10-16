@@ -22,7 +22,8 @@
   onMount(load);
 
   const scenarios = $derived(data?.scenarios ?? []);
-  const running = $derived(scenarios.find((s) => s.running));
+  // só conta como "em andamento" o lab com tentativa aberta; lab já resolvido não prende o destaque
+  const running = $derived(scenarios.find((s) => s.inProgress));
   const next = $derived(scenarios.find((s) => s.id === data?.next));
   const featured = $derived(running ?? next);
 
@@ -45,7 +46,7 @@
   const others = $derived(scenarios.filter((s) => s.level !== 'iniciante'));
 
   function cardStatus(s) {
-    if (s.running) return { label: 'EM ANDAMENTO', cls: 'st-run' };
+    if (s.inProgress) return { label: 'EM ANDAMENTO', cls: 'st-run' };
     if (s.resolved) return { label: 'RESOLVIDO', cls: 'st-ok' };
     if (s.id === data?.next) return { label: 'PRÓXIMO', cls: 'st-next' };
     return { label: 'NOVO', cls: 'st-new' };
@@ -118,7 +119,7 @@
         <article class="panel featured">
           <div class="strip" class:crit={featured.severity === 'critica'}>
             <span class="pill" style:background={sv.color} style:color={sv.ink}>{sv.pill}</span>
-            <span class="strip-txt">{featured.running ? 'Incidente em andamento' : 'Próximo incidente recomendado'}</span>
+            <span class="strip-txt">{featured.inProgress ? 'Incidente em andamento' : 'Próximo incidente recomendado'}</span>
             <span class="mono strip-id">#{featured.number} · {featured.track} · {featured.level}</span>
           </div>
           <div class="fbody">
@@ -131,7 +132,7 @@
             {/if}
             <div class="factions">
               <a class="btn btn-primary" href={`#/lab/${featured.id}`}>
-                {featured.running ? 'Voltar ao plantão' : 'Assumir o plantão'}
+                {featured.inProgress ? 'Voltar ao plantão' : 'Assumir o plantão'}
               </a>
               <span class="mono faint">~{featured.minutes} min · {featured.hintCount} dicas</span>
             </div>

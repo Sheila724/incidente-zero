@@ -111,6 +111,7 @@ type summary struct {
 	Tags        []string `json:"tags"`
 	HintCount   int      `json:"hintCount"`
 	Running     bool     `json:"running"`
+	InProgress  bool     `json:"inProgress"` // lab rodando com tentativa aberta (ainda não resolvida)
 	Resolved    bool     `json:"resolved"`
 	BestSeconds int      `json:"bestSeconds"`
 	BestPoints  int      `json:"bestPoints"`
@@ -131,6 +132,7 @@ func (s *Server) summarize(sc *scenario.Scenario, running map[string]bool) summa
 		ID: sc.ID, Number: number(sc.ID), Title: sc.Title, Level: sc.Level, Track: sc.Track,
 		Minutes: sc.EstimatedMinutes, Severity: sc.Alert.Severity, AlertTitle: sc.Alert.Title,
 		Tags: sc.Tags, HintCount: hc, Running: running[sc.ID],
+		InProgress: running[sc.ID] && rec.StartedAt != nil,
 		Resolved: rec.Resolved, BestSeconds: rec.BestSeconds, BestPoints: rec.BestPoints,
 	}
 }
