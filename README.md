@@ -16,17 +16,29 @@ Tudo em português, do iniciante ao avançado, rodando na sua máquina.
 
 ## Início rápido
 
-**Requisitos:** Linux com Docker (Windows via WSL2 e Mac também funcionam no modo local) e Go 1.22+ para compilar.
+**Requisitos:** Linux com Docker (Windows via WSL2 e Mac também funcionam no modo local), Go 1.22+ e Node 20.19+ para compilar.
 
 ```bash
 git clone https://github.com/Sheila724/incidente-zero.git
 cd incidente-zero
-go build -o iz ./cmd/iz
+make build        # compila a interface web e o binário iz
 
 ./iz build        # constrói a imagem base dos labs
 ./iz list         # lista os cenários
 ./iz start 001    # sobe o lab e abre o terminal do incidente
 ```
+
+### Pela interface web
+
+```bash
+./iz ui           # abre em http://127.0.0.1:8080
+```
+
+A interface traz a central de plantão com seu progresso, o terminal do lab no navegador, o modo guiado com verificação automática de cada passo, dicas progressivas, monitoramento ao vivo do servidor (HTTP, porta 80, CPU, memória e disco) e o botão **Verificar** (`Ctrl+Enter`).
+
+Para expor num servidor, use `./iz ui --addr 0.0.0.0:8080` **somente atrás de um proxy com autenticação** (Traefik com basic auth, por exemplo): a interface dá acesso a terminais.
+
+### Pelo terminal
 
 Dentro do lab, investigue e corrija. Depois:
 
@@ -41,6 +53,7 @@ Dentro do lab, investigue e corrija. Depois:
 
 | Comando | O que faz |
 |---|---|
+| `iz ui` | Abre a interface web |
 | `iz list` | Lista os cenários disponíveis |
 | `iz build` | Constrói a imagem base dos labs |
 | `iz start <cenário>` | Sobe o lab, injeta o incidente e abre o terminal |
@@ -70,7 +83,7 @@ Dentro do lab, investigue e corrija. Depois:
 - [x] Cenário 001 completo
 - [x] CLI `iz`
 - [ ] Trilha iniciante completa (001–008)
-- [ ] Interface web com terminal no navegador
+- [x] Interface web com terminal no navegador
 - [ ] Trilha intermediária: rede, web, banco e **Zabbix**
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
 - [ ] Modo plantão com pontuação e postmortem guiado
