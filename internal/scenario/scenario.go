@@ -12,9 +12,10 @@ import (
 )
 
 type Mount struct {
-	Type string `yaml:"type"`
-	Path string `yaml:"path"`
-	Size string `yaml:"size"`
+	Type   string `yaml:"type"`
+	Path   string `yaml:"path"`
+	Size   string `yaml:"size"`
+	Inodes int    `yaml:"inodes"` // limite de arquivos (nr_inodes) do tmpfs
 }
 
 type Resources struct {

@@ -1,0 +1,20 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O erro diz "No space left on device", mas o df -h mostra espaço livre.
+      Um arquivo precisa de duas coisas para existir: espaço para o conteúdo e
+      uma entrada na tabela de arquivos do sistema. Qual delas acabou?
+
+  - level: 2
+    cost: 20
+    text: >
+      `df -i` mostra o uso de inodes, um por arquivo. Descubra qual pasta tem
+      milhares de arquivos pequenos e veja a data deles com `ls -lt | tail`.
+      Depois procure o que deveria apagá-los em `systemctl list-timers --all`.
+
+  - level: 3
+    cost: 40
+    text: >
+      Rode `sudo find /var/lib/app/sessions -type f -mmin +60 -delete` e depois
+      `sudo systemctl enable --now limpa-sessoes.timer`. Confira com `df -i` e curl.

@@ -1,0 +1,20 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      A mensagem do cliente ("Permission denied (publickey)") nunca diz o motivo,
+      de propósito. O servidor SSH registra por que recusou: veja o log do serviço ssh.
+
+  - level: 2
+    cost: 20
+    text: >
+      O sshd recusa chaves quando a pasta home, a ~/.ssh ou o authorized_keys
+      podem ser alterados por outros usuários. Alguém rodou um chmod -R 777 no
+      /home/deploy. Confira o caminho com `namei -l`.
+
+  - level: 3
+    cost: 40
+    text: >
+      Rode: `sudo chmod 755 /home/deploy`, `sudo chmod 700 /home/deploy/.ssh`,
+      `sudo chmod 600 /home/deploy/.ssh/authorized_keys` e
+      `sudo chown -R deploy:deploy /home/deploy/.ssh`. Depois teste o ssh de novo.

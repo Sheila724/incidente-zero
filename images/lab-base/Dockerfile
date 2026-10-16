@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       vim nano less \
       procps psmisc htop lsof ncdu tree \
       iproute2 iputils-ping dnsutils netcat-openbsd \
-      logrotate \
+      logrotate cron openssh-server openssh-client \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Units que não fazem sentido dentro de container

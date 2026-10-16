@@ -1,0 +1,20 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Algo está respondendo na porta 80, mas não é o site da loja. O nginx
+      deveria estar lá: ele está rodando? O que ele diz ao tentar subir?
+
+  - level: 2
+    cost: 20
+    text: >
+      O nginx não sobe porque a porta 80 já está em uso ("Address already in use").
+      `sudo ss -ltnp 'sport = :80'` mostra o processo que ocupa a porta.
+      Depois, `systemctl status <PID>` mostra de qual serviço ele é.
+
+  - level: 3
+    cost: 40
+    text: >
+      É o serviço debug-http, um `python3 -m http.server 80` servindo a raiz do
+      servidor. Rode `sudo systemctl disable --now debug-http` e depois
+      `sudo systemctl start nginx`.
