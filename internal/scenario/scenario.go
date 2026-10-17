@@ -12,9 +12,10 @@ import (
 )
 
 type Mount struct {
-	Type string `yaml:"type"`
-	Path string `yaml:"path"`
-	Size string `yaml:"size"`
+	Type   string `yaml:"type"`
+	Path   string `yaml:"path"`
+	Size   string `yaml:"size"`
+	Inodes int    `yaml:"inodes"` // limite de arquivos (nr_inodes) do tmpfs
 }
 
 type Resources struct {
@@ -26,8 +27,22 @@ type Resources struct {
 
 type Alert struct {
 	Severity string `yaml:"severity"`
+	Source   string `yaml:"source"`
 	Title    string `yaml:"title"`
 	Briefing string `yaml:"briefing"`
+}
+
+// GuidedStep é um passo do modo guiado. Verify roda como root no lab.
+type GuidedStep struct {
+	Title    string `yaml:"title"`
+	Text     string `yaml:"text"`
+	Verify   string `yaml:"verify"`
+	Optional bool   `yaml:"optional"`
+}
+
+type Scoring struct {
+	Base             int `yaml:"base"`
+	TimeBonusMinutes int `yaml:"time_bonus_minutes"`
 }
 
 type Content struct {
@@ -45,18 +60,22 @@ type Scripts struct {
 }
 
 type Scenario struct {
-	ID               string    `yaml:"id"`
-	Title            string    `yaml:"title"`
-	Level            string    `yaml:"level"`
-	Track            string    `yaml:"track"`
-	EstimatedMinutes int       `yaml:"estimated_minutes"`
-	Image            string    `yaml:"image"`
-	Hostname         string    `yaml:"hostname"`
-	User             string    `yaml:"user"`
-	Resources        Resources `yaml:"resources"`
-	Alert            Alert     `yaml:"alert"`
-	Content          Content   `yaml:"content"`
-	Scripts          Scripts   `yaml:"scripts"`
+	ID               string       `yaml:"id"`
+	Title            string       `yaml:"title"`
+	Level            string       `yaml:"level"`
+	Track            string       `yaml:"track"`
+	EstimatedMinutes int          `yaml:"estimated_minutes"`
+	Tags             []string     `yaml:"tags"`
+	Objectives       []string     `yaml:"learning_objectives"`
+	Image            string       `yaml:"image"`
+	Hostname         string       `yaml:"hostname"`
+	User             string       `yaml:"user"`
+	Resources        Resources    `yaml:"resources"`
+	Alert            Alert        `yaml:"alert"`
+	Content          Content      `yaml:"content"`
+	Scripts          Scripts      `yaml:"scripts"`
+	Guided           []GuidedStep `yaml:"guided"`
+	Scoring          Scoring      `yaml:"scoring"`
 
 	Dir string `yaml:"-"` // pasta do cenário no disco
 }

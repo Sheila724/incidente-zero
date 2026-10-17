@@ -1,0 +1,70 @@
+apiVersion: incidente-zero/v1
+
+id: 007-ssh-recusa-chave
+title: "SSH recusando a chave do deploy"
+level: iniciante
+track: linux
+estimated_minutes: 20
+tags: [ssh, permissões, chmod, chown, deploy, journalctl]
+
+learning_objectives:
+  - Usar ssh -v para entender uma falha de autenticação
+  - Ler o motivo real da recusa no log do servidor SSH
+  - Conhecer as permissões que o sshd exige (StrictModes)
+  - Corrigir dono e permissões de ~/.ssh e authorized_keys
+  - Entender por que chmod 777 nunca é a solução
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: app-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: alta
+  source: pipeline
+  title: "Deploy falhando: Permission denied (publickey)"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Reproduza a falha
+    text: "Tente o mesmo acesso do pipeline: `ssh -i ~/ci/deploy_key deploy@localhost`."
+  - title: Veja o lado do cliente
+    text: "Repita com `-v`. A chave chega a ser oferecida ao servidor?"
+  - title: Veja o lado do servidor
+    text: "O motivo real fica no log do sshd: `journalctl -u ssh -n 30`."
+  - title: Corrija as pastas
+    text: "Confira com `namei -l /home/deploy/.ssh/authorized_keys`. Nenhuma pasta do caminho pode ser gravável por outros."
+    verify: "[ -z \"$(find /home/deploy /home/deploy/.ssh -maxdepth 0 -perm /022)\" ]"
+  - title: Corrija o arquivo de chaves
+    text: "O `authorized_keys` precisa pertencer ao `deploy` e não pode ser gravável por outros."
+    verify: "[ \"$(stat -c %U /home/deploy/.ssh/authorized_keys)\" = deploy ] && [ -z \"$(find /home/deploy/.ssh/authorized_keys -perm /022)\" ]"
+  - title: Valide o acesso
+    text: "`ssh -i ~/ci/deploy_key deploy@localhost 'cat app/release.txt'`"
+    verify: "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /home/aluno/ci/deploy_key deploy@127.0.0.1 true"
+  - title: "Bônus: desfaça o resto do chmod 777"
+    text: "O `-R` deixou outros arquivos do deploy graváveis por qualquer um. Encontre com `find /home/deploy -perm -o+w`."
+    verify: "[ -z \"$(find /home/deploy -perm -o+w | head -1)\" ]"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 10

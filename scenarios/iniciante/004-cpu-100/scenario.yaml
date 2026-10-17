@@ -1,0 +1,70 @@
+apiVersion: incidente-zero/v1
+
+id: 004-cpu-100
+title: "Processo consumindo 100% de CPU"
+level: iniciante
+track: linux
+estimated_minutes: 20
+tags: [cpu, top, ps, systemd, kill, load-average]
+
+learning_objectives:
+  - Ler load average e uso de CPU com uptime e top
+  - Encontrar o processo culpado com ps e top
+  - Descobrir qual serviço do systemd é dono de um PID
+  - Entender por que matar o processo não resolve quando há Restart=always
+  - Corrigir a configuração que causou o loop sem desligar o serviço
+  - Limitar o estrago com CPUQuota
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: alta
+  source: monitoramento
+  title: "CPU em 100% em loja-web-01 e API lenta"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Rode `uptime` e `top`. Quem está no topo da lista de CPU?"
+  - title: Identifique o processo
+    text: "Use `ps aux --sort=-%cpu | head` e anote o PID e o comando."
+  - title: Descubra o dono do processo
+    text: "`systemctl status <PID>` mostra qual serviço iniciou aquele processo."
+  - title: Entenda por que ele volta
+    text: "Tente encerrar o processo e rode `ps` de novo. Leia `systemctl cat report-worker`."
+  - title: Corrija a configuração
+    text: "O worker lê `/etc/report-worker/worker.conf`. Que valor faz ele rodar sem pausa?"
+    verify: "v=$(grep -E '^INTERVAL_SECONDS=' /etc/report-worker/worker.conf | cut -d= -f2); [ \"${v:-0}\" -ge 60 ] 2>/dev/null"
+  - title: Reinicie o serviço e confira a CPU
+    text: "`sudo systemctl restart report-worker` e acompanhe com `top`."
+    verify: "pid=$(systemctl show -p MainPID --value report-worker); [ \"$pid\" -gt 0 ] && a=$(awk '{print $14+$15}' /proc/$pid/stat) && sleep 1 && b=$(awk '{print $14+$15}' /proc/$pid/stat) && [ $((b-a)) -lt 20 ]"
+  - title: "Bônus: limite a CPU do worker"
+    text: "Crie um override com `sudo systemctl edit report-worker` e defina `CPUQuota=20%`."
+    verify: "systemctl show -p CPUQuotaPerSecUSec --value report-worker | grep -qv infinity"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 10

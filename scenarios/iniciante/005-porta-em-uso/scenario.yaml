@@ -1,0 +1,65 @@
+apiVersion: incidente-zero/v1
+
+id: 005-porta-em-uso
+title: "Porta 80 ocupada por outro processo"
+level: iniciante
+track: linux
+estimated_minutes: 15
+tags: [portas, ss, lsof, nginx, systemd, segurança]
+
+learning_objectives:
+  - Descobrir qual processo está escutando numa porta com ss e lsof
+  - Ler o erro "Address already in use" e entender o que ele significa
+  - Encontrar o serviço do systemd por trás de um processo
+  - Parar e desabilitar um serviço para que não volte no boot
+  - Reconhecer quando um incidente também é um problema de segurança
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: critica
+  source: cliente
+  title: "Site da loja mostrando uma lista de arquivos do servidor"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Veja o que o cliente vê
+    text: "Rode `curl -s http://localhost | head -20`. Isso é a Loja Exemplo?"
+  - title: Verifique o nginx
+    text: "`systemctl status nginx` e `journalctl -u nginx -n 20`. Qual é o erro?"
+  - title: Descubra quem ocupa a porta 80
+    text: "Use `sudo ss -ltnp 'sport = :80'` ou `sudo lsof -i :80`."
+  - title: Encontre o serviço por trás do processo
+    text: "`systemctl status <PID>` mostra a unit. Leia o arquivo com `systemctl cat`."
+  - title: Pare e desabilite o intruso
+    text: "Pare o serviço e garanta que ele não volte no próximo boot."
+    verify: "! systemctl is-active --quiet debug-http && ! systemctl is-enabled --quiet debug-http"
+  - title: Suba o nginx e valide
+    text: "`sudo systemctl start nginx` e confira com `curl http://localhost`."
+    verify: "curl -s http://localhost/ | grep -q '<h1>Loja Exemplo</h1>'"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 8
