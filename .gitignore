@@ -1,5 +1,5 @@
 *.deb
 auth/
 .env
-dist/
-iz
+/iz
+/dist/

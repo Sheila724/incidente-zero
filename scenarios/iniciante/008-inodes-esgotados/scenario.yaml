@@ -1,0 +1,72 @@
+apiVersion: incidente-zero/v1
+
+id: 008-inodes-esgotados
+title: "\"Disco cheio\" com espaço sobrando"
+level: iniciante
+track: linux
+estimated_minutes: 25
+tags: [disco, inodes, df, find, systemd-timer, sessões]
+
+learning_objectives:
+  - Entender o que são inodes e por que eles podem acabar antes do espaço
+  - Diagnosticar com df -i e contar arquivos com find
+  - Apagar milhares de arquivos com find -delete, de forma seletiva
+  - Encontrar a rotina de limpeza que deveria evitar o acúmulo
+  - Corrigir sem derrubar as sessões ativas dos clientes
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 512m
+  pids: 512
+  mounts:
+    # partição pequena com limite de arquivos: o incidente nunca afeta o host
+    - type: tmpfs
+      path: /var/lib/app
+      size: 64m
+      inodes: 3000
+
+alert:
+  severity: alta
+  source: monitoramento
+  title: "Loja Exemplo retornando HTTP 503 (No space left on device)"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Rode `curl -i http://localhost` e veja o log da aplicação: `journalctl -u app -n 20`."
+  - title: Olhe o espaço em disco
+    text: "Use `df -h`. A partição da aplicação está cheia?"
+  - title: Olhe os inodes
+    text: "Agora `df -i`. Compare a coluna `IUse%` com o `Use%` do comando anterior."
+  - title: Encontre onde estão os arquivos
+    text: "Conte os arquivos: `sudo find /var/lib/app -xdev -type f | cut -d/ -f1-5 | sort | uniq -c`."
+  - title: Libere inodes sem derrubar quem está logado
+    text: "Apague só as sessões com mais de 60 minutos, com `find ... -mmin +60 -delete`."
+    verify: "[ $(df --output=ipcent /var/lib/app | tail -1 | tr -dc 0-9) -lt 80 ]"
+  - title: Ache a rotina de limpeza
+    text: "Alguma coisa deveria limpar essas sessões. Procure em `systemctl list-timers --all`."
+  - title: Religue a limpeza
+    text: "Reative o timer para o problema não voltar."
+    verify: "systemctl is-enabled --quiet limpa-sessoes.timer && systemctl is-active --quiet limpa-sessoes.timer"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 12

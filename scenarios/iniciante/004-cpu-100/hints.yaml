@@ -1,0 +1,20 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O servidor não caiu, só ficou lento. `top` ordena os processos por uso de CPU:
+      quem está lá em cima? E ele é uma parte esperada do sistema?
+
+  - level: 2
+    cost: 20
+    text: >
+      Matar o processo não adianta: ele volta em segundos com outro PID. Rode
+      `systemctl status <PID>` para descobrir o serviço e `systemctl cat` nele.
+      Tem uma opção que manda o systemd reiniciar o processo sempre.
+
+  - level: 3
+    cost: 40
+    text: >
+      O serviço report-worker lê /etc/report-worker/worker.conf, que está com
+      INTERVAL_SECONDS=0: ele gera relatórios sem nenhuma pausa. Volte para 300,
+      rode `sudo systemctl restart report-worker` e confira com `top`.
