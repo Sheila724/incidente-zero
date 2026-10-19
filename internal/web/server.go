@@ -133,7 +133,7 @@ func (s *Server) summarize(sc *scenario.Scenario, running map[string]bool) summa
 		Minutes: sc.EstimatedMinutes, Severity: sc.Alert.Severity, AlertTitle: sc.Alert.Title,
 		Tags: sc.Tags, HintCount: hc, Running: running[sc.ID],
 		InProgress: running[sc.ID] && rec.StartedAt != nil,
-		Resolved: rec.Resolved, BestSeconds: rec.BestSeconds, BestPoints: rec.BestPoints,
+		Resolved:   rec.Resolved, BestSeconds: rec.BestSeconds, BestPoints: rec.BestPoints,
 	}
 }
 

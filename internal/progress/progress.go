@@ -155,7 +155,7 @@ func (s *Store) Resolve(id string, base, bonusMinutes int) (Record, error) {
 		base = 100
 	}
 	points := base - r.HintCost
-	if bonusMinutes > 0 && secs > 0 && secs <= bonusMinutes*60 {
+	if bonusMinutes > 0 && r.StartedAt != nil && secs <= bonusMinutes*60 {
 		points += 10
 	}
 	if r.SolutionViewed {
