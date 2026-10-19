@@ -53,10 +53,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" out/* \
-            --title "Incidente Zero $TAG" \
-            --generate-notes \
-            $( [[ "$TAG" == *-* ]] && echo --prerelease )
+          # Se a release já existe (tag reenviada), só atualiza os arquivos
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/* --clobber
+          else
+            gh release create "$TAG" out/* \
+              --title "Incidente Zero $TAG" \
+              --generate-notes \
+              $( [[ "$TAG" == *-* ]] && echo --prerelease )
+          fi
 
   imagem:
     name: Imagem base no GHCR
