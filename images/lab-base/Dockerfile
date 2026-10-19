@@ -3,6 +3,10 @@
 
 FROM ubuntu:24.04
 
+LABEL org.opencontainers.image.source="https://github.com/Sheila724/incidente-zero" \
+      org.opencontainers.image.description="Imagem base dos labs do Incidente Zero" \
+      org.opencontainers.image.licenses="MIT"
+
 ENV DEBIAN_FRONTEND=noninteractive \
     container=docker \
     LANG=C.UTF-8

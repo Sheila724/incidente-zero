@@ -18,17 +18,34 @@ Todo cenário tem uma armadilha: matar o processo que volta sozinho, apagar o lo
 
 ## Início rápido
 
-**Requisitos:** Linux com Docker (Windows via WSL2 e Mac também funcionam no modo local), Go 1.22+ e Node 20.19+ para compilar.
+**Requisitos:** Linux ou macOS com Docker. No Windows, use o WSL2. Em Linux, o [Sysbox](https://github.com/nestybox/sysbox) é recomendado para isolar os labs.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sheila724/incidente-zero/main/install.sh | sh
+
+iz pull       # baixa a imagem base dos labs
+iz doctor     # confere Docker, runtime e imagem
+iz ui         # abre em http://127.0.0.1:8080
+```
+
+O instalador baixa o binário da última versão, confere o checksum e instala em `/usr/local/bin` (ou em `~/.local/bin`). Os cenários vêm **embutidos no binário**: não precisa clonar o repositório. Para uma versão específica, use `IZ_VERSION=v0.1.0`.
+
+Prefere baixar na mão? Os binários de cada versão ficam em [Releases](https://github.com/Sheila724/incidente-zero/releases).
+
+### Compilando do código
+
+Para contribuir ou testar mudanças, compile a partir do repositório (precisa de Go 1.22+ e Node 20.19+):
 
 ```bash
 git clone https://github.com/Sheila724/incidente-zero.git
 cd incidente-zero
-make build        # compila a interface web e o binário iz
-./iz build        # constrói a imagem base dos labs
-./iz ui           # abre em http://127.0.0.1:8080
+make build        # compila a interface e o binário
+make test         # roda os testes, inclusive a validação de todos os cenários
+./iz build        # constrói a imagem base localmente
+./iz ui
 ```
 
-Depois de atualizar o projeto (`git pull`), rode `make build` e `./iz build` de novo: a imagem base também evolui junto com os cenários.
+Rodando de dentro do repositório, o `iz` usa a pasta `scenarios/` local, então suas mudanças nos cenários aparecem na hora.
 
 ## A interface
 
@@ -59,32 +76,34 @@ O progresso fica salvo em `~/.config/incidente-zero/progress.json`.
 
 ### Num servidor
 
-`./iz ui` escuta só em `127.0.0.1`. Para acessar uma VPS do seu computador, use um túnel SSH:
+`iz ui` escuta só em `127.0.0.1`. Para acessar uma VPS do seu computador, use um túnel SSH:
 
 ```bash
 ssh -L 8080:127.0.0.1:8080 usuario@seu-servidor
 ```
 
-Para expor de verdade, use `./iz ui --addr 0.0.0.0:8080` **somente atrás de um proxy com autenticação** (Traefik com basic auth, por exemplo): a interface dá acesso a terminais.
+Para expor de verdade, use `iz ui --addr 0.0.0.0:8080` **somente atrás de um proxy com autenticação** (Traefik com basic auth, por exemplo): a interface dá acesso a terminais.
 
 ## Pelo terminal
 
 Tudo também funciona sem a interface:
 
 ```bash
-./iz list         # lista os cenários
-./iz start 001    # sobe o lab e abre o terminal do incidente
-./iz check        # depois de sair do lab (exit): valida a correção
-./iz hint 1       # dica, se travar
-./iz solution     # solução comentada e causa raiz
-./iz stop         # destrói o lab
+iz list         # lista os cenários
+iz start 001    # sobe o lab e abre o terminal do incidente
+iz check        # depois de sair do lab (exit): valida a correção
+iz hint 1       # dica, se travar
+iz solution     # solução comentada e causa raiz
+iz stop         # destrói o lab
 ```
 
 | Comando | O que faz |
 |---|---|
 | `iz ui` | Abre a interface web |
+| `iz pull` | Baixa a imagem base pronta |
+| `iz doctor` | Confere Docker, runtime, imagem e cenários |
 | `iz list` | Lista os cenários disponíveis |
-| `iz build` | Constrói a imagem base dos labs |
+| `iz build` | Constrói a imagem base localmente |
 | `iz start <cenário>` | Sobe o lab, injeta o incidente e abre o terminal |
 | `iz shell` | Reabre o terminal do lab |
 | `iz check` | Verifica se o incidente foi resolvido |
@@ -125,7 +144,7 @@ Tudo também funciona sem a interface:
 - [ ] Trilha intermediária: rede, web, banco e **Zabbix**
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
 - [ ] Postmortem guiado, gerado a partir do que você fez no lab
-- [ ] Binários prontos para download (sem precisar compilar)
+- [x] Binários prontos para download, instalador e CI
 
 ## Arquitetura
 
@@ -156,6 +175,15 @@ scenarios/iniciante/001-disco-cheio/
     └── check.sh      # exit 0 = resolvido; uma linha ✅/❌ por verificação
 ```
 
+## Publicando uma versão
+
+Uma tag `v*` dispara o workflow de release, que roda os testes, compila os binários para Linux e macOS (amd64 e arm64), publica a release com os checksums e envia a imagem base para o GHCR:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
 ## Contribuindo
 
 Quer criar um cenário? Use o `001-disco-cheio` como modelo. Algumas regras que mantêm a qualidade:
@@ -164,6 +192,8 @@ Quer criar um cenário? Use o `001-disco-cheio` como modelo. Algumas regras que 
 - **O `check.sh` confere a causa raiz**, não só o sintoma, e não aceita "soluções" que criam outro problema (como `chmod 777` ou desligar verificações de segurança).
 - **Partições de teste com `tmpfs`** nos incidentes de disco (`size` e, se precisar, `inodes` em `resources.mounts`).
 - **Passos do modo guiado com `verify`** sempre que der para verificar automaticamente.
+
+O CI valida todos os cenários automaticamente (`go test ./...`): campos obrigatórios, arquivos referenciados, dicas, autoverificação no `inject.sh` e `shellcheck` nos scripts.
 
 Toda contribuição de incidente real que você já viveu, anonimizado, é bem-vinda.
 

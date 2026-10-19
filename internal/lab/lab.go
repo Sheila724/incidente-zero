@@ -176,3 +176,28 @@ func Build(contextDir, tag string) error {
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	return cmd.Run()
 }
+
+// BuildDockerfile constrói a imagem a partir de um Dockerfile em memória (sem contexto).
+func BuildDockerfile(dockerfile []byte, tag string) error {
+	cmd := docker("build", "-t", tag, "-")
+	cmd.Stdin = bytes.NewReader(dockerfile)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	return cmd.Run()
+}
+
+// Pull baixa a imagem pronta do registry.
+func Pull(tag string) error {
+	cmd := docker("pull", tag)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	return cmd.Run()
+}
+
+// ImageExists informa se a imagem já está no Docker local.
+func ImageExists(tag string) bool {
+	return docker("image", "inspect", tag).Run() == nil
+}
+
+// DockerAvailable informa se o daemon do Docker responde.
+func DockerAvailable() bool {
+	return docker("info", "--format", "{{.ServerVersion}}").Run() == nil
+}
