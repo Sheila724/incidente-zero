@@ -1,0 +1,23 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O 502 vem do nginx, mas quem falha é a aplicação. Em `journalctl -u app`
+      aparece o IP que ela tenta usar para a API de pagamentos. Compare com o
+      que o DNS interno responde em `dig api.pagamentos.interno`.
+
+  - level: 2
+    cost: 20
+    text: >
+      O `dig` pergunta direto ao servidor DNS. A aplicação usa o resolvedor do
+      sistema, que segue a ordem de /etc/nsswitch.conf (`hosts: files dns`):
+      primeiro o /etc/hosts. Use `getent hosts api.pagamentos.interno` para ver
+      o que o sistema realmente responde e procure o nome no /etc/hosts.
+
+  - level: 3
+    cost: 40
+    text: >
+      Remova a linha de api.pagamentos.interno do /etc/hosts com `sudo nano /etc/hosts`
+      (num lab, o /etc/hosts é montado pelo Docker e `sed -i` não consegue
+      substituí-lo). Depois reinicie a aplicação com `sudo systemctl restart app`:
+      ela resolve o nome só uma vez, quando inicia.

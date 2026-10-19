@@ -1,0 +1,25 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O curl diz `certificate has expired`. Veja as datas do certificado que o
+      servidor entrega com `openssl s_client -connect 127.0.0.1:443 -servername loja.local
+      </dev/null | openssl x509 -noout -dates`. Depois procure o que deveria
+      renovar esse certificado: `systemctl list-unit-files '*.timer'`.
+
+  - level: 2
+    cost: 20
+    text: >
+      O timer renova-certificado está desabilitado. Rode a renovação na mão
+      (`sudo systemctl start renova-certificado.service` ou o script
+      /usr/local/sbin/renova-certificado) e compare as datas do arquivo com as
+      do certificado que o servidor entrega. São iguais?
+
+  - level: 3
+    cost: 40
+    text: >
+      O nginx só lê o certificado quando inicia ou recarrega. Rode
+      `sudo nginx -t && sudo systemctl reload nginx`. Para a próxima vez:
+      `sudo systemctl enable --now renova-certificado.timer` e acrescente
+      `systemctl reload nginx` no fim do script de renovação (ou um
+      ExecStartPost no serviço).

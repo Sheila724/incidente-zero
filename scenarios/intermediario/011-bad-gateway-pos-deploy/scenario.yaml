@@ -1,0 +1,69 @@
+apiVersion: incidente-zero/v1
+
+id: 011-bad-gateway-pos-deploy
+title: "502 Bad Gateway após deploy"
+level: intermediario
+track: web
+estimated_minutes: 25
+tags: [nginx, proxy reverso, upstream, 502, deploy, ss]
+
+learning_objectives:
+  - Entender o que um 502 diz sobre o caminho entre o proxy e a aplicação
+  - Ler o error.log do nginx e identificar o upstream que falha
+  - Conferir em que porta cada processo escuta com ss
+  - Encontrar todas as referências a um backend na configuração
+  - Aplicar mudanças no nginx com segurança (nginx -t e reload)
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 256m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Loja Exemplo retornando HTTP 502 após deploy"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Teste o site e a API: `curl -i http://localhost/` e `curl -i http://localhost/api/produtos`."
+  - title: Leia o log de erros do nginx
+    text: "Use `sudo tail -n 20 /var/log/nginx/error.log`. Para qual endereço o nginx está tentando se conectar?"
+  - title: Veja onde a aplicação escuta
+    text: "Use `sudo ss -ltnp` e `systemctl status app`. A porta bate com a do nginx? Leia /opt/app/CHANGELOG.md."
+  - title: Encontre as referências ao backend
+    text: "Procure todos os lugares que apontam para a aplicação: `grep -rn '127.0.0.1:80' /etc/nginx/`."
+  - title: Corrija e recarregue
+    text: "Ajuste o nginx para a porta nova, teste com `sudo nginx -t` e aplique com `sudo systemctl reload nginx`."
+    verify: "[ \"$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)\" = 200 ]"
+  - title: Confira a API também
+    text: "O site voltou. E o app mobile, que usa `/api/produtos`?"
+    verify: "curl -s http://localhost/api/produtos | grep -q '\"versao\": \"2.4.0\"'"
+  - title: "Bônus: um lugar só para o backend"
+    text: "Faça a rota /api/ usar o upstream `loja_app`, para que a próxima mudança de porta seja feita num lugar só."
+    verify: "! grep -REq '^[^#]*proxy_pass +http://127\\.0\\.0\\.1:' /etc/nginx/sites-enabled/ /etc/nginx/conf.d/"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 10

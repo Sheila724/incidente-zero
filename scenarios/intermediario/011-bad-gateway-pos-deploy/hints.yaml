@@ -1,0 +1,24 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Um 502 significa que o nginx está de pé, mas não conseguiu uma resposta da
+      aplicação. O `/var/log/nginx/error.log` diz exatamente para qual endereço
+      (`upstream:`) ele tentou se conectar. Compare com a porta em que a aplicação
+      escuta: `sudo ss -ltnp`.
+
+  - level: 2
+    cost: 20
+    text: >
+      O deploy 2.4.0 mudou a porta da aplicação para 8081 (veja /opt/app/CHANGELOG.md
+      e /etc/app/app.env). Não reverta: a 8080 será usada por outro serviço. Ajuste
+      o nginx. Atenção: o endereço do backend pode aparecer em mais de um arquivo,
+      use `grep -rn '127.0.0.1:80' /etc/nginx/`.
+
+  - level: 3
+    cost: 40
+    text: >
+      Troque 8080 por 8081 no bloco `upstream loja_app` em
+      /etc/nginx/conf.d/upstream-loja.conf e, em /etc/nginx/sites-available/loja,
+      faça a `location /api/` usar `proxy_pass http://loja_app;`. Depois:
+      `sudo nginx -t && sudo systemctl reload nginx`.
