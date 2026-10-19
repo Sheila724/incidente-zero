@@ -1,0 +1,66 @@
+apiVersion: incidente-zero/v1
+
+id: 012-too-many-connections
+title: "Banco de dados recusando conexões"
+level: intermediario
+track: banco
+estimated_minutes: 30
+tags: [mariadb, mysql, conexões, max_connections, processlist, cron]
+
+learning_objectives:
+  - Reconhecer o erro "Too many connections" e o que ele diz sobre o banco
+  - Ver quem está conectado com SHOW PROCESSLIST e agrupar por usuário
+  - Encerrar conexões presas com KILL sem reiniciar o banco
+  - Encontrar o processo do sistema que segura as conexões
+  - Corrigir a causa (vazamento) e limitar o estrago (max_user_connections)
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-db-01
+user: aluno
+requires: []
+resources:
+  cpus: 1
+  memory: 768m
+  pids: 1024
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Loja Exemplo retornando HTTP 503 (banco indisponível)"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Rode `curl -s http://localhost/` e `sudo journalctl -u app -n 5`. Qual é o erro do banco?"
+  - title: Veja quem está conectado
+    text: "Entre no banco como root (`sudo mariadb`) e rode `SHOW PROCESSLIST;`. Depois agrupe: `SELECT user, command, COUNT(*) FROM information_schema.processlist GROUP BY user, command;`"
+  - title: Encontre o processo por trás das conexões
+    text: "Quem, no sistema operacional, abriu essas conexões? Use `ps -ef | grep -i relatorio` e `cat /etc/cron.d/*`."
+  - title: Libere as conexões presas
+    text: "Encerre os processos do relatório (ou use `KILL <id>` no banco) e confirme que a loja voltou."
+    verify: "[ \"$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/checkout)\" = 200 ]"
+  - title: Corrija a causa
+    text: "Leia /opt/relatorios/relatorio-vendas.py. O que acontece com as conexões enquanto ele espera o FTP? Corrija o script e, se quiser uma rede de proteção, limite as conexões do usuário relatorio."
+  - title: "Bônus: limite por usuário"
+    text: "Um job de relatório não deveria conseguir derrubar a loja. Use `ALTER USER 'relatorio'@'127.0.0.1' WITH MAX_USER_CONNECTIONS 5;`."
+    verify: "[ \"$(mariadb -N -e \"SELECT max_user_connections FROM mysql.user WHERE user='relatorio'\")\" -gt 0 ] 2>/dev/null"
+    optional: true
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

@@ -3,6 +3,7 @@
 # o servidor foi migrado para um template novo, e o timer de renovação
 # não foi habilitado. O certificado venceu ontem.
 set -euo pipefail
+umask 022
 
 systemctl disable --now renova-certificado.timer 2>/dev/null
 

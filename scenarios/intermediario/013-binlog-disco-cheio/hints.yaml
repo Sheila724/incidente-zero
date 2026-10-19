@@ -1,0 +1,26 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Leituras funcionam e gravações não. Veja `df -h /var/lib/mysql` e
+      `sudo journalctl -u mariadb -n 20`: o MariaDB diz exatamente o que está
+      esperando. Depois some o tamanho dos arquivos mysql-bin.* na partição.
+
+  - level: 2
+    cost: 20
+    text: >
+      Os binlogs encheram a partição, e o MariaDB está parado esperando espaço:
+      nem `SHOW BINARY LOGS` nem `PURGE` respondem, porque precisam da mesma trava.
+      Não reinicie o banco e não mate as consultas presas: com o disco cheio, isso
+      pode piorar. Primeiro libere espaço no sistema de arquivos movendo os
+      binlogs mais antigos (nunca o último) para fora da partição.
+
+  - level: 3
+    cost: 40
+    text: >
+      `sudo mv /var/lib/mysql/mysql-bin.000001 /var/lib/mysql/mysql-bin.000002 /root/`,
+      espere até um minuto, e então, em `sudo mariadb`:
+      `SHOW MASTER STATUS;` e `PURGE BINARY LOGS TO '<arquivo atual>';`.
+      Para não voltar: `SET GLOBAL binlog_expire_logs_seconds = 86400;` e o mesmo
+      valor em /etc/mysql/mariadb.conf.d/60-loja.cnf (ou desligue o log_bin, já que
+      a réplica não existe mais). Depois apague os arquivos movidos para /root.

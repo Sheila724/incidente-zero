@@ -3,6 +3,7 @@
 # o deploy da versão 2.4.0 mudou a porta da aplicação para 8081,
 # mas ninguém ajustou o nginx.
 set -euo pipefail
+umask 022
 
 cat > /etc/app/app.env <<'EOT'
 # Loja Exemplo — variáveis de ambiente (gerenciado pelo deploy)

@@ -4,6 +4,7 @@
 #   DNS interno (10.20.0.2) responde a zona "interno".
 #   A API de pagamentos ainda está no servidor antigo, 10.20.0.9.
 set -euo pipefail
+umask 022
 
 id app &>/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin app
 install -d -m 0755 /etc/app /opt/app /opt/pagamentos /opt/dns-interno /etc/dns-interno /etc/rede-interna
