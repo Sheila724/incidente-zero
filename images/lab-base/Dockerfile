@@ -19,7 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       procps psmisc htop lsof ncdu tree \
       iproute2 iputils-ping dnsutils netcat-openbsd \
       logrotate cron openssh-server openssh-client \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+      mariadb-server mariadb-client python3-pymysql \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /var/lib/mysql/*
+
+# MariaDB fica desligado e sem dados: só os cenários de banco o habilitam,
+# criando o próprio diretório de dados (mariadb-install-db)
+RUN systemctl disable mariadb 2>/dev/null || true
 
 # Units que não fazem sentido dentro de container
 RUN systemctl mask \

@@ -2,6 +2,7 @@
 # Cenário 011 — prepara o ambiente SAUDÁVEL:
 #   nginx (80) como proxy reverso -> Loja Exemplo v2.3 (127.0.0.1:8080)
 set -euo pipefail
+umask 022
 
 id app &>/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin app
 install -d -m 0755 /etc/app /opt/app

@@ -4,6 +4,7 @@
 # O DNS foi atualizado, mas o /etc/hosts ainda fixa o IP antigo e a aplicação
 # guardou o IP antigo na memória quando iniciou.
 set -euo pipefail
+umask 022
 
 # Migração: o servidor antigo foi desligado e o novo assumiu
 systemctl stop pagamentos-api

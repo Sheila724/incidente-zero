@@ -148,7 +148,9 @@ iz stop         # destrói o lab
 | 009 | Checkout falhando após migração da API de pagamentos | `getent` × `dig`, `/etc/hosts`, `nsswitch.conf`, cache de DNS na aplicação | ✅ |
 | 010 | Certificado TLS expirado em produção | `openssl s_client`, CA interna, `reload` do nginx, timers do systemd | ✅ |
 | 011 | 502 Bad Gateway após deploy | proxy reverso, `upstream`, `error.log`, `ss -ltnp` | ✅ |
-| — | Banco de dados e alertas reais do **Zabbix** | | 🚧 |
+| 012 | Banco de dados recusando conexões | `SHOW PROCESSLIST`, `KILL`, vazamento de conexões, `MAX_USER_CONNECTIONS` | ✅ |
+| 013 | Banco travado por disco cheio | binlog, `PURGE BINARY LOGS`, expiração, disco cheio no MariaDB | ✅ |
+| — | Alertas reais do **Zabbix** | | 🚧 |
 
 ### Próximas trilhas
 
@@ -163,7 +165,7 @@ iz stop         # destrói o lab
 - [x] Trilha iniciante completa (001–008)
 - [x] Interface web com terminal no navegador e monitoramento ao vivo
 - [x] Pontuação, MTTR pessoal e histórico de plantões
-- [ ] Trilha intermediária: rede, web, banco e **Zabbix** (rede e web prontos)
+- [ ] Trilha intermediária: rede, web, banco e **Zabbix** (rede, web e banco prontos)
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
 - [ ] Postmortem guiado, gerado a partir do que você fez no lab
 - [x] Binários prontos para download, instalador e CI
@@ -180,7 +182,7 @@ Navegador ── HTTP / WebSocket ──▶ iz ui (Go, interface embutida)
                                    └─ Docker ──▶ lab (Ubuntu + systemd, isolado com Sysbox)
 ```
 
-- **Labs:** containers Ubuntu com systemd, cron e SSH. No Linux, usa o runtime [Sysbox](https://github.com/nestybox/sysbox) para isolamento forte sem `--privileged`. Sem Sysbox, roda no modo local. Cada lab tem limite de CPU, memória e processos, e os incidentes de disco usam partições `tmpfs` próprias: nunca enchem o seu disco.
+- **Labs:** containers Ubuntu com systemd, cron, SSH e MariaDB (desligado por padrão). No Linux, usa o runtime [Sysbox](https://github.com/nestybox/sysbox) para isolamento forte sem `--privileged`. Sem Sysbox, roda no modo local. Cada lab tem limite de CPU, memória e processos, e os incidentes de disco usam partições `tmpfs` próprias: nunca enchem o seu disco.
 - **Backend:** Go, um binário só, com a interface embutida (`go:embed`). O terminal usa WebSocket e PTY, e só aceita conexões da mesma origem.
 - **Interface:** Svelte 5 + Vite, xterm.js para o terminal e fontes locais, sem chamadas externas.
 - **Cenários:** cada um é uma pasta com `scenario.yaml`, conteúdo em Markdown e scripts `setup`, `inject` e `check`. Adicionar um cenário não exige mexer em código.

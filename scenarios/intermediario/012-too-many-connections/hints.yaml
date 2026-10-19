@@ -1,0 +1,25 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      O log da aplicação (`sudo journalctl -u app -n 5`) mostra o erro 1040,
+      "Too many connections". Entre no banco com `sudo mariadb` (o root ainda
+      consegue: o MariaDB reserva uma conexão extra para administradores) e rode
+      `SHOW PROCESSLIST;`. Quem são esses usuários e o que estão fazendo?
+
+  - level: 2
+    cost: 20
+    text: >
+      Quase todas as conexões são do usuário `relatorio`, paradas em `Sleep`.
+      Ache o processo que as abriu: `ps -ef | grep relatorio` e
+      /etc/cron.d/relatorio-vendas. Reiniciar o banco libera tudo, mas o cron
+      roda de novo a cada minuto. Leia /opt/relatorios/relatorio-vendas.py.
+
+  - level: 3
+    cost: 40
+    text: >
+      O script abre uma conexão por categoria e dorme até 10 minutos esperando o
+      FTP, sem fechar nada. Feche as conexões antes do `time.sleep` (por exemplo,
+      `for conn in conexoes.values(): conn.close()`), encerre as execuções antigas
+      com `sudo pkill -u relatorios -f relatorio-vendas` e, como proteção, limite o
+      usuário: `ALTER USER 'relatorio'@'127.0.0.1' WITH MAX_USER_CONNECTIONS 5;`.

@@ -3,6 +3,7 @@
 #   nginx servindo https://loja.local com certificado emitido pela CA interna,
 #   renovado automaticamente por um timer do systemd.
 set -euo pipefail
+umask 022
 
 install -d -m 0755 /var/www/loja /etc/ssl/loja
 install -d -m 0700 /etc/ssl/loja-ca

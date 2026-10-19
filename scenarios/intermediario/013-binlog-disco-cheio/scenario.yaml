@@ -1,0 +1,73 @@
+apiVersion: incidente-zero/v1
+
+id: 013-binlog-disco-cheio
+title: "Banco travado por disco cheio"
+level: intermediario
+track: banco
+estimated_minutes: 35
+tags: [mariadb, binlog, disco, purge, df, replicação]
+
+learning_objectives:
+  - Reconhecer um banco travado por falta de espaço (leituras funcionam, gravações não)
+  - Descobrir o que ocupa a partição do banco
+  - Entender para que servem os binary logs (binlog)
+  - Liberar binlogs com PURGE BINARY LOGS, e não com rm
+  - Configurar a expiração do binlog (ou desligá-lo quando não é usado)
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-db-01
+user: aluno
+requires: []
+resources:
+  cpus: 1
+  memory: 1g
+  pids: 1024
+  mounts:
+    # partição própria para os dados do banco: o "disco cheio" nunca enche o host
+    - type: tmpfs
+      path: /var/lib/mysql
+      size: 256m
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Checkout falhando: banco de dados não grava pedidos"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Compare uma leitura e uma gravação: `curl -s http://localhost/` e `curl -s -m 15 http://localhost/checkout`. O banco está fora do ar?"
+  - title: Olhe o banco e o disco
+    text: "Veja `sudo journalctl -u mariadb -n 20`, `df -h /var/lib/mysql` e, no banco, `sudo mariadb -e 'SHOW PROCESSLIST'`. O que as consultas estão esperando?"
+  - title: Descubra o que ocupa a partição
+    text: "Use `sudo du -ch /var/lib/mysql/mysql-bin.* | tail -1` e `sudo ls -lh /var/lib/mysql`. O que são os arquivos mysql-bin.*?"
+  - title: Destrave o banco
+    text: "Com o disco 100% cheio, nem o `PURGE BINARY LOGS` consegue rodar. Libere um pouco de espaço movendo os binlogs **mais antigos** (nunca o último) para fora da partição, por exemplo para /root, e espere até um minuto."
+    verify: "! mariadb -e 'SHOW PROCESSLIST' | grep -q 'free space'"
+  - title: Limpe do jeito certo
+    text: "Veja `SHOW BINARY LOGS;` e `SHOW MASTER STATUS;` e remova os antigos com `PURGE BINARY LOGS TO 'mysql-bin.NNNNNN';` (o arquivo atual)."
+    verify: "[ $(df --output=pcent /var/lib/mysql | tail -1 | tr -dc '0-9') -lt 80 ]"
+  - title: Confira que o checkout voltou
+    text: "Teste o checkout de novo."
+    verify: "[ \"$(curl -s -o /dev/null -m 15 -w '%{http_code}' http://localhost/checkout)\" = 200 ]"
+  - title: Impeça que encha de novo
+    text: "A réplica de teste não existe mais. Desligue o binlog ou configure a expiração (`binlog_expire_logs_seconds`) no arquivo de configuração e no servidor em execução."
+    verify: "[ \"$(mariadb -N -e 'SELECT @@log_bin = 0 OR @@binlog_expire_logs_seconds > 0')\" = 1 ]"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15
