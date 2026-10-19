@@ -1,0 +1,17 @@
+# Interface do Incidente Zero como serviço do systemd.
+#   sudo cp deploy/incidente-zero.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now incidente-zero
+[Unit]
+Description=Incidente Zero - interface web
+After=docker.service
+Requires=docker.service
+
+[Service]
+# --lab-idle remove labs esquecidos (sem a página do lab aberta) depois de 30 min
+ExecStart=/usr/local/bin/iz ui --lab-idle 30m
+Environment=HOME=/root
+WorkingDirectory=/root
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

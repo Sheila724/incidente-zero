@@ -1,0 +1,30 @@
+# Rotas do Traefik para o Incidente Zero.
+# Troque o domínio e gere o usuário com:
+#   openssl passwd -apr1            (digite a senha duas vezes)
+# e cole como "usuario:HASH" em users. Em YAML, use aspas simples: o hash tem "$".
+http:
+  routers:
+    incidente-zero:
+      rule: Host(`iz.SEU-DOMINIO`)
+      entryPoints: [websecure]
+      middlewares: [iz-auth, iz-headers]
+      service: incidente-zero
+      tls:
+        certResolver: le
+
+  middlewares:
+    iz-auth:
+      basicAuth:
+        realm: Incidente Zero
+        users:
+          - 'usuario:$apr1$TROQUE$PELOHASHGERADO'
+    iz-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+
+  services:
+    incidente-zero:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8080

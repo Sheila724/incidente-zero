@@ -1,0 +1,26 @@
+# Traefik na frente do `iz ui`: HTTPS automático (Let's Encrypt) e basic auth.
+#
+# O `iz ui` continua escutando só em 127.0.0.1:8080. O Traefik usa a rede do
+# host para alcançá-lo, então a interface nunca fica exposta sem autenticação.
+#
+# Antes de subir: edite o dynamic.yml (domínio e usuário) e o e-mail abaixo.
+#   docker compose up -d
+services:
+  traefik:
+    image: traefik:v3.5
+    container_name: iz-traefik
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --certificatesresolvers.le.acme.email=SEU-EMAIL@exemplo.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+    volumes:
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./letsencrypt:/letsencrypt

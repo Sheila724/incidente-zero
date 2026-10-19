@@ -1,15 +1,11 @@
 # Solução comentada
 
-
-> Tente resolver antes de ler. Se travar, use as dicas primeiro
-
+> Tente resolver antes de ler. Se travar, use as dicas primeiro.
 
 ## 1. Reproduza o sintoma
 
-
-
 ```bash
-curl -Icurl -I http://localhost/
+curl -I http://localhost/
 curl -I http://localhost/produtos/
 curl -I http://localhost/img/logo.svg
 ```
