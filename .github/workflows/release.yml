@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  binarios:
+    name: Binários e GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Compila a interface
+        working-directory: web
+        run: npm ci && npm run build
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Testes
+        run: go test ./...
+
+      - name: Compila para Linux e macOS
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p out
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            os=${target%/*}; arch=${target#*/}
+            dir="build/iz_${os}_${arch}"
+            mkdir -p "$dir"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
+              -ldflags "-s -w -X main.version=${VERSION}" -o "$dir/iz" ./cmd/iz
+            cp LICENSE README.md "$dir/"
+            tar -czf "out/iz_${os}_${arch}.tar.gz" -C "$dir" iz LICENSE README.md
+          done
+          cp install.sh out/
+          (cd out && sha256sum iz_*.tar.gz > checksums.txt)
+          ls -l out
+
+      - name: Publica a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" out/* \
+            --title "Incidente Zero $TAG" \
+            --generate-notes \
+            $( [[ "$TAG" == *-* ]] && echo --prerelease )
+
+  imagem:
+    name: Imagem base no GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push (amd64 e arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: images/lab-base
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/sheila724/incidente-zero/lab-base:${{ github.ref_name }}
+            ghcr.io/sheila724/incidente-zero/lab-base:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

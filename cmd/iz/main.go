@@ -10,7 +10,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"text/tabwriter"
+
+	incidentezero "github.com/Sheila724/incidente-zero"
 
 	"github.com/Sheila724/incidente-zero/internal/lab"
 	"github.com/Sheila724/incidente-zero/internal/progress"
@@ -19,14 +22,17 @@ import (
 	webui "github.com/Sheila724/incidente-zero/web"
 )
 
-const version = "0.1.0-dev"
+// version é preenchida no build de release: -ldflags "-X main.version=v0.1.0"
+var version = "dev"
 
 const usage = `Incidente Zero — aprenda a resolver incidentes antes do seu primeiro plantão.
 
 Uso:
   iz ui [--addr host:porta] abre a interface web (padrão 127.0.0.1:8080)
   iz list                  lista os cenários disponíveis
-  iz build                 constrói a imagem base dos labs
+  iz pull                  baixa a imagem base pronta (recomendado)
+  iz build                 constrói a imagem base localmente
+  iz doctor                confere Docker, runtime e imagem
   iz start <cenário>       sobe o lab, injeta o incidente e abre o terminal
   iz shell [cenário]       reabre o terminal do lab
   iz check [cenário]       verifica se o incidente foi resolvido
@@ -40,7 +46,7 @@ O cenário pode ser o ID completo ou o prefixo: "001" = "001-disco-cheio".
 Se omitido, usa o lab em execução.
 
 Variáveis:
-  IZ_HOME     pasta do projeto (padrão: diretório atual)
+  IZ_HOME     pasta com os cenários (padrão: ./scenarios, ou os embutidos no iz)
   IZ_RUNTIME  sysbox | local (padrão: detecta automaticamente)
 `
 
@@ -60,7 +66,42 @@ func home() string {
 	return "."
 }
 
-func scenariosDir() string { return filepath.Join(home(), "scenarios") }
+var (
+	scenOnce sync.Once
+	scenDir  string
+)
+
+// scenariosDir escolhe de onde ler os cenários:
+//  1. IZ_HOME/scenarios, se IZ_HOME estiver definido;
+//  2. ./scenarios, quando o iz roda dentro do repositório;
+//  3. os cenários embutidos no binário, extraídos no cache do usuário.
+func scenariosDir() string {
+	scenOnce.Do(func() {
+		if os.Getenv("IZ_HOME") != "" {
+			scenDir = filepath.Join(home(), "scenarios")
+			return
+		}
+		if m, _ := filepath.Glob(filepath.Join("scenarios", "*", "*", "scenario.yaml")); len(m) > 0 {
+			scenDir = "scenarios"
+			return
+		}
+		cache, err := os.UserCacheDir()
+		if err != nil {
+			cache = os.TempDir()
+		}
+		dir := filepath.Join(cache, "incidente-zero", "scenarios-"+version)
+		if version == "dev" {
+			_ = os.RemoveAll(dir)
+		}
+		if _, err := os.Stat(dir); err != nil {
+			if err := incidentezero.ExtractScenarios(dir); err != nil {
+				fmt.Fprintln(os.Stderr, "erro ao preparar os cenários:", err)
+			}
+		}
+		scenDir = dir
+	})
+	return scenDir
+}
 
 func run(args []string) error {
 	if len(args) == 0 {
@@ -75,7 +116,14 @@ func run(args []string) error {
 	case "list", "ls":
 		return cmdList()
 	case "build":
-		return lab.Build(filepath.Join(home(), "images", "lab-base"), baseImage)
+		if dir := filepath.Join(home(), "images", "lab-base"); fileExists(filepath.Join(dir, "Dockerfile")) {
+			return lab.Build(dir, baseImage)
+		}
+		return lab.BuildDockerfile(incidentezero.LabBaseDockerfile, baseImage)
+	case "pull":
+		return lab.Pull(baseImage)
+	case "doctor":
+		return cmdDoctor()
 	case "start":
 		if len(rest) < 1 {
 			return fmt.Errorf("informe o cenário: iz start 001")
@@ -313,4 +361,41 @@ func cmdUI(args []string) error {
 		return nil
 	}
 	return err
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
+func cmdDoctor() error {
+	ok := true
+	check := func(pass bool, good, bad string) {
+		if pass {
+			fmt.Println("✅", good)
+		} else {
+			fmt.Println("❌", bad)
+			ok = false
+		}
+	}
+	fmt.Println("iz", version)
+	dockerOK := lab.DockerAvailable()
+	check(dockerOK, "Docker acessível", "Docker não encontrado ou sem permissão (o usuário está no grupo docker?)")
+	if dockerOK {
+		rt := lab.Runtime()
+		if rt == "sysbox" {
+			fmt.Println("✅ Runtime: sysbox (isolamento forte)")
+		} else {
+			fmt.Println("⚠️  Runtime: local (sem Sysbox; os labs rodam com --privileged)")
+		}
+		check(lab.ImageExists(baseImage), "Imagem base presente: "+baseImage,
+			"Imagem base ausente: rode `iz pull` (ou `iz build`)")
+	}
+	all, err := scenario.LoadAll(scenariosDir())
+	check(err == nil && len(all) > 0, fmt.Sprintf("%d cenários em %s", len(all), scenariosDir()),
+		"Nenhum cenário encontrado")
+	if !ok {
+		return fmt.Errorf("há itens para corrigir")
+	}
+	return nil
 }

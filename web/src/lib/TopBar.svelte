@@ -25,7 +25,7 @@
   <a href="#/" class="brand">
     <Logo />
     <span class="name">Incidente Zero</span>
-    {#if status?.version}<span class="ver mono">v{status.version.replace(/-dev$/, '')}</span>{/if}
+    {#if status?.version}<span class="ver mono">{status.version}</span>{/if}
   </a>
   <nav aria-label="Principal">
     <a href="#/" class:active={current === 'central'}>Central</a>
