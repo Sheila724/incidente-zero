@@ -1,0 +1,65 @@
+apiVersion: incidente-zero/v1
+
+id: 009-pagamentos-inalcancavel
+title: "Checkout falhando após migração da API de pagamentos"
+level: intermediario
+track: rede
+estimated_minutes: 30
+tags: [dns, resolução de nomes, /etc/hosts, getent, dig, nsswitch, cache]
+
+learning_objectives:
+  - Seguir uma requisição de ponta a ponta até achar a dependência que falha
+  - Entender a ordem de resolução de nomes no Linux (nsswitch.conf)
+  - Diferenciar o que o dig mostra do que a aplicação realmente usa (getent)
+  - Encontrar e remover um IP fixado no /etc/hosts
+  - Lembrar que aplicações podem guardar o IP resolvido em memória
+
+image: ghcr.io/sheila724/incidente-zero/lab-base:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 0.5
+  memory: 512m
+  pids: 512
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Checkout retornando HTTP 502"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Teste a home e o checkout: `curl -i http://localhost/` e `curl -i http://localhost/checkout`. Só uma parte da loja está quebrada?"
+  - title: Leia o log da aplicação
+    text: "Use `journalctl -u app -n 20`. Qual dependência falha, e em qual IP a aplicação tenta conectar?"
+  - title: Pergunte ao DNS
+    text: "Veja o que o DNS interno responde: `dig api.pagamentos.interno`. É o mesmo IP do log?"
+  - title: Pergunte como o sistema resolve
+    text: "Agora use `getent hosts api.pagamentos.interno`, que segue o mesmo caminho da aplicação. Por que a resposta é diferente? Olhe a linha `hosts:` em /etc/nsswitch.conf."
+  - title: Remova o IP fixado
+    text: "Encontre e remova a entrada de api.pagamentos.interno no /etc/hosts."
+    verify: "! grep -Eq '^[^#]*api\\.pagamentos\\.interno' /etc/hosts"
+  - title: Faça a aplicação usar o IP novo
+    text: "O checkout voltou? Se não, lembre o que o log mostrou quando a aplicação iniciou."
+    verify: "[ \"$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/checkout)\" = 200 ]"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

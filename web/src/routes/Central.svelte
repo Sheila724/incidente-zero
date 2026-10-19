@@ -42,8 +42,13 @@
     })
   );
 
-  const beginner = $derived(scenarios.filter((s) => s.level === 'iniciante'));
-  const others = $derived(scenarios.filter((s) => s.level !== 'iniciante'));
+  // Catálogo agrupado por trilha, na ordem iniciante → intermediário → avançado
+  const groups = $derived(
+    LEVELS.map((l) => ({ ...l, list: scenarios.filter((s) => s.level === l.id) })).filter(
+      (g) => g.list.length
+    )
+  );
+  const TRACK_NAMES = { linux: 'Linux', rede: 'Rede', web: 'Web', banco: 'Banco', docker: 'Docker', zabbix: 'Zabbix', kubernetes: 'Kubernetes' };
 
   function cardStatus(s) {
     if (s.inProgress) return { label: 'EM ANDAMENTO', cls: 'st-run' };
@@ -168,38 +173,23 @@
     </section>
 
     <section class="catalog" id="cenarios">
-      <div class="sec-head">
-        <h2>Trilha iniciante · Linux e troubleshooting</h2>
-        <span class="mono faint">{beginner.length} instalados</span>
-      </div>
-      <div class="grid">
-        {#each beginner as s (s.id)}
-          {@const st = cardStatus(s)}
-          {@const sv = sev(s.severity)}
-          <a class="panel card" class:next={st.cls === 'st-next'} class:run={st.cls === 'st-run'} href={`#/lab/${s.id}`}>
-            <div class="card-top">
-              <span class="mono faint small">#{s.number}</span>
-              <span class="dot" style:background={sv.color}></span>
-              <span class="muted small">{sv.label}</span>
-              <span class="pill {st.cls}">{st.label}</span>
-            </div>
-            <div class="card-title">{s.title}</div>
-            <div class="mono faint small card-meta">{meta(s)}</div>
-          </a>
-        {/each}
-      </div>
-
-      {#if others.length}
-        <div class="sec-head"><h2>Outras trilhas</h2></div>
+      {#each groups as g (g.id)}
+        <div class="sec-head">
+          <h2>{g.title} · {g.desc}</h2>
+          <span class="mono faint">{g.list.length} instalados</span>
+        </div>
         <div class="grid">
-          {#each others as s (s.id)}
+          {#each g.list as s (s.id)}
             {@const st = cardStatus(s)}
             {@const sv = sev(s.severity)}
-            <a class="panel card" href={`#/lab/${s.id}`}>
+            <a class="panel card" class:next={st.cls === 'st-next'} class:run={st.cls === 'st-run'} href={`#/lab/${s.id}`}>
               <div class="card-top">
                 <span class="mono faint small">#{s.number}</span>
                 <span class="dot" style:background={sv.color}></span>
-                <span class="muted small">{s.level}</span>
+                <span class="muted small">{sv.label}</span>
+                {#if g.id !== 'iniciante' && TRACK_NAMES[s.track]}
+                  <span class="mono faint small">· {TRACK_NAMES[s.track]}</span>
+                {/if}
                 <span class="pill {st.cls}">{st.label}</span>
               </div>
               <div class="card-title">{s.title}</div>
@@ -207,7 +197,7 @@
             </a>
           {/each}
         </div>
-      {/if}
+      {/each}
     </section>
 
     <section class="panel history">
@@ -300,6 +290,7 @@
   .segs span { height: 6px; border-radius: 2px; }
 
   .catalog { display: flex; flex-direction: column; gap: 14px; }
+  .catalog .grid + .sec-head { margin-top: 18px; }
   .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
   .sec-head h2 { font-size: 18px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }

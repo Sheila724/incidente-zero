@@ -141,11 +141,19 @@ iz stop         # destrói o lab
 | 007 | SSH recusando a chave do deploy | `ssh -v`, log do sshd, `StrictModes`, permissões de `~/.ssh` | ✅ |
 | 008 | "Disco cheio" com espaço sobrando | inodes, `df -i`, `find -delete` seletivo | ✅ |
 
+### Trilha intermediária: rede, web, banco e Zabbix 🚧
+
+| ID | Incidente | O que você pratica | Status |
+|---|---|---|---|
+| 009 | Checkout falhando após migração da API de pagamentos | `getent` × `dig`, `/etc/hosts`, `nsswitch.conf`, cache de DNS na aplicação | ✅ |
+| 010 | Certificado TLS expirado em produção | `openssl s_client`, CA interna, `reload` do nginx, timers do systemd | ✅ |
+| 011 | 502 Bad Gateway após deploy | proxy reverso, `upstream`, `error.log`, `ss -ltnp` | ✅ |
+| — | Banco de dados e alertas reais do **Zabbix** | | 🚧 |
+
 ### Próximas trilhas
 
 | Trilha | Foco | Status |
 |---|---|---|
-| Intermediária | Rede, web, banco e alertas reais do **Zabbix** | 🚧 |
 | Avançada | **Kubernetes** (k3s) e incidentes em cascata | 🚧 |
 
 ## Roadmap
@@ -155,10 +163,13 @@ iz stop         # destrói o lab
 - [x] Trilha iniciante completa (001–008)
 - [x] Interface web com terminal no navegador e monitoramento ao vivo
 - [x] Pontuação, MTTR pessoal e histórico de plantões
-- [ ] Trilha intermediária: rede, web, banco e **Zabbix**
+- [ ] Trilha intermediária: rede, web, banco e **Zabbix** (rede e web prontos)
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
 - [ ] Postmortem guiado, gerado a partir do que você fez no lab
 - [x] Binários prontos para download, instalador e CI
+- [x] Demo online com HTTPS e senha, e limpeza automática de labs
+- [ ] Variações nos cenários (nomes, portas e serviços diferentes a cada execução)
+- [ ] **Modo Plantão:** escala de disponibilidade, incidentes sorteados, alertas no celular, ack, escalonamento e relatório do turno
 
 ## Arquitetura
 
