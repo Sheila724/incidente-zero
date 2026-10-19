@@ -26,6 +26,9 @@ type Server struct {
 	Version      string
 
 	labMu sync.Mutex // um start/stop por vez
+
+	seenMu   sync.Mutex
+	lastSeen map[string]time.Time // última atividade por cenário (limpeza de labs)
 }
 
 // Handler monta as rotas da API e do frontend.
@@ -82,6 +85,7 @@ func (s *Server) find(w http.ResponseWriter, r *http.Request) (*scenario.Scenari
 		writeErr(w, http.StatusNotFound, err.Error())
 		return nil, false
 	}
+	s.touch(sc.ID)
 	return sc, true
 }
 

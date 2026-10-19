@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -339,6 +340,7 @@ func cmdShow(rest []string, files func(*scenario.Scenario) []string) error {
 func cmdUI(args []string) error {
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 	addr := fs.String("addr", "127.0.0.1:8080", "endereço de escuta (use 0.0.0.0:8080 atrás de um proxy com autenticação)")
+	idle := fs.Duration("lab-idle", 0, "remove labs sem atividade na interface por esse tempo, ex.: 30m (0 desliga)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -355,6 +357,10 @@ func cmdUI(args []string) error {
 	fmt.Printf("Incidente Zero rodando em http://%s  (Ctrl+C para sair)\n", *addr)
 	if !strings.HasPrefix(*addr, "127.0.0.1") && !strings.HasPrefix(*addr, "localhost") {
 		fmt.Println("Atenção: a interface dá acesso a terminais. Exponha só atrás de um proxy com autenticação.")
+	}
+	if *idle > 0 {
+		fmt.Printf("Labs sem atividade por %s serão removidos automaticamente.\n", *idle)
+		go srv.ReapIdle(context.Background(), *idle)
 	}
 	err = http.ListenAndServe(*addr, srv.Handler())
 	if errors.Is(err, http.ErrServerClosed) {

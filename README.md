@@ -82,7 +82,21 @@ O progresso fica salvo em `~/.config/incidente-zero/progress.json`.
 ssh -L 8080:127.0.0.1:8080 usuario@seu-servidor
 ```
 
-Para expor de verdade, use `iz ui --addr 0.0.0.0:8080` **somente atrás de um proxy com autenticação** (Traefik com basic auth, por exemplo): a interface dá acesso a terminais.
+Para deixar a interface sempre no ar, use o serviço do systemd em [`deploy/incidente-zero.service`](deploy/incidente-zero.service). Ele roda com `--lab-idle 30m`, que remove sozinho os labs esquecidos: um lab sem a página aberta por 30 minutos é destruído.
+
+### Publicando com HTTPS e senha
+
+A interface dá acesso a terminais, então **nunca exponha o `iz ui` direto na internet**. Em [`deploy/traefik/`](deploy/traefik/) há um Traefik pronto, com certificado do Let's Encrypt e basic auth, que encaminha para o `iz ui` em `127.0.0.1`:
+
+```bash
+cd deploy/traefik
+openssl passwd -apr1                 # gera o hash da senha
+nano dynamic.yml                     # domínio e usuário:hash
+nano docker-compose.yml              # e-mail do Let's Encrypt
+docker compose up -d
+```
+
+O domínio precisa apontar para o servidor. Sem domínio próprio, use o [sslip.io](https://sslip.io): `iz.203-0-113-10.sslip.io` resolve para `203.0.113.10`.
 
 ## Pelo terminal
 
