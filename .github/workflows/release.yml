@@ -53,15 +53,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          # Se a release já existe (tag reenviada), só atualiza os arquivos
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" out/* --clobber
-          else
-            gh release create "$TAG" out/* \
-              --title "Incidente Zero $TAG" \
-              --generate-notes \
-              $( [[ "$TAG" == *-* ]] && echo --prerelease )
+          # 1. Cria a release como rascunho, sem arquivos (ou reaproveita a que já existe,
+          #    inclusive um rascunho de uma execução que falhou)
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            pre=""
+            if [[ "$TAG" == *-* ]]; then pre="--prerelease"; fi
+            gh release create "$TAG" --draft --title "Incidente Zero $TAG" --generate-notes $pre
           fi
+
+          # 2. Envia os arquivos, substituindo os que já existirem (com novas tentativas)
+          for tentativa in 1 2 3; do
+            if gh release upload "$TAG" out/* --clobber; then break; fi
+            [ "$tentativa" = 3 ] && exit 1
+            echo "Falha no envio, tentando de novo..."; sleep 15
+          done
+
+          # 3. Confere os arquivos e só então publica
+          esperados=$(find out -maxdepth 1 -type f | wc -l)
+          enviados=$(gh release view "$TAG" --json assets --jq '.assets | length')
+          if [ "$enviados" -lt "$esperados" ]; then
+            echo "Release com $enviados de $esperados arquivos" >&2
+            exit 1
+          fi
+          gh release edit "$TAG" --draft=false
 
   imagem:
     name: Imagens dos labs no GHCR
