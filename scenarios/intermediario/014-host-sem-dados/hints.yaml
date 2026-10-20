@@ -1,0 +1,22 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Teste o agente exatamente como o Zabbix Server faz:
+      `zabbix_get -s 127.0.0.1 -k agent.ping`. Se não vier `1`, o problema está
+      entre o servidor e o agente. O serviço zabbix-agent2 está rodando?
+
+  - level: 2
+    cost: 20
+    text: >
+      O agente está de pé, mas recusa as conexões. O log
+      (/var/log/zabbix/zabbix_agent2.log) diz de quem ele aceita conexões. Compare
+      com o parâmetro `Server=` em /etc/zabbix/zabbix_agent2.conf.
+
+  - level: 3
+    cost: 40
+    text: >
+      O Ansible aplicou o perfil da filial, que aponta para um proxy desativado
+      (10.20.0.50). Troque `Server=` e `ServerActive=` para `127.0.0.1` e rode
+      `sudo systemctl restart zabbix-agent2`. Depois volte em *Incidentes* no
+      Zabbix: algo que estava escondido vai aparecer.

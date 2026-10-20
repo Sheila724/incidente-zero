@@ -192,6 +192,21 @@ func Pull(tag string) error {
 	return cmd.Run()
 }
 
+// IP devolve o endereço do container do lab na rede do Docker.
+func IP(s *scenario.Scenario) (string, error) {
+	out, err := docker("inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}",
+		s.ContainerName()).Output()
+	if err != nil {
+		return "", fmt.Errorf("lab não encontrado")
+	}
+	for _, ip := range strings.Fields(string(out)) {
+		if ip != "" {
+			return ip, nil
+		}
+	}
+	return "", fmt.Errorf("o lab não tem endereço de rede")
+}
+
 // ImageExists informa se a imagem já está no Docker local.
 func ImageExists(tag string) bool {
 	return docker("image", "inspect", tag).Run() == nil

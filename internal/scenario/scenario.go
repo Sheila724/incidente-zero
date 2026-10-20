@@ -59,6 +59,16 @@ type Scripts struct {
 	Check  string `yaml:"check"`
 }
 
+// App é uma interface web que roda dentro do lab (ex.: o frontend do Zabbix).
+// A interface do iz a publica em /apps/<cenário>/<name>/.
+type App struct {
+	Name     string `yaml:"name"`     // identificador na URL (ex.: zabbix)
+	Title    string `yaml:"title"`    // nome no botão (ex.: Zabbix)
+	Port     int    `yaml:"port"`     // porta HTTP dentro do lab
+	Login    string `yaml:"login"`    // usuário para mostrar ao aluno (opcional)
+	Password string `yaml:"password"` // senha para mostrar ao aluno (opcional)
+}
+
 type Scenario struct {
 	ID               string       `yaml:"id"`
 	Title            string       `yaml:"title"`
@@ -75,6 +85,7 @@ type Scenario struct {
 	Content          Content      `yaml:"content"`
 	Scripts          Scripts      `yaml:"scripts"`
 	Guided           []GuidedStep `yaml:"guided"`
+	Apps             []App        `yaml:"apps"`
 	Scoring          Scoring      `yaml:"scoring"`
 
 	Dir string `yaml:"-"` // pasta do cenário no disco
@@ -103,6 +114,16 @@ func (s *Scenario) ReadFile(rel string) (string, error) {
 	}
 	b, err := os.ReadFile(s.Path(rel))
 	return string(b), err
+}
+
+// App devolve a interface web pelo nome.
+func (s *Scenario) App(name string) (App, bool) {
+	for _, a := range s.Apps {
+		if a.Name == name {
+			return a, true
+		}
+	}
+	return App{}, false
 }
 
 // Hints carrega as dicas do cenário.

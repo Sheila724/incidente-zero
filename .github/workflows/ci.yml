@@ -49,4 +49,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck
-        run: shellcheck -S warning install.sh scenarios/*/*/scripts/*.sh
+        run: shellcheck -S warning install.sh scenarios/*/*/scripts/*.sh images/lab-zabbix/zbx-api images/lab-zabbix/zabbix-lab-up images/lab-zabbix/zabbix-lab-host

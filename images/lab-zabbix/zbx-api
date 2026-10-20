@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# zbx-api — chama a API do Zabbix do lab.
+#   zbx-api <método> [params em JSON]
+#   zbx-api host.get '{"output":["host"],"selectInterfaces":["available"]}'
+# Usuário e senha: ZBX_USER / ZBX_PASSWORD (padrão Admin / zabbix).
+set -euo pipefail
+
+URL=${ZBX_URL:-http://127.0.0.1:8081/api_jsonrpc.php}
+metodo=${1:?uso: zbx-api <método> [params em JSON]}
+params=${2:-'{}'}
+
+chamar() {
+  curl -fsS -m 15 -X POST -H 'Content-Type: application/json-rpc' ${3:+-H "Authorization: Bearer $3"} \
+    --data "{\"jsonrpc\":\"2.0\",\"method\":\"$1\",\"params\":$2,\"id\":1}" "$URL"
+}
+
+if [ "$metodo" = "apiinfo.version" ]; then
+  chamar "$metodo" '{}' | jq -r '.result'
+  exit 0
+fi
+
+token=$(chamar user.login "{\"username\":\"${ZBX_USER:-Admin}\",\"password\":\"${ZBX_PASSWORD:-zabbix}\"}" | jq -r '.result // empty')
+[ -n "$token" ] || { echo "zbx-api: não consegui autenticar no Zabbix" >&2; exit 1; }
+resposta=$(chamar "$metodo" "$params" "$token")
+chamar user.logout '[]' "$token" >/dev/null 2>&1 || true
+
+if echo "$resposta" | jq -e '.error' >/dev/null; then
+  echo "$resposta" | jq -r '"zbx-api: " + .error.message + " " + (.error.data // "")' >&2
+  exit 1
+fi
+echo "$resposta" | jq '.result'

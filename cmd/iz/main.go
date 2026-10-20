@@ -51,7 +51,24 @@ Variáveis:
   IZ_RUNTIME  sysbox | local (padrão: detecta automaticamente)
 `
 
-const baseImage = "ghcr.io/sheila724/incidente-zero/lab-base:latest"
+const (
+	baseImage   = "ghcr.io/sheila724/incidente-zero/lab-base:latest"
+	zabbixImage = "ghcr.io/sheila724/incidente-zero/lab-zabbix:latest"
+)
+
+// labImages lista as imagens usadas pelos cenários, começando pela base.
+func labImages() []string {
+	imgs := []string{baseImage}
+	seen := map[string]bool{baseImage: true}
+	all, _ := scenario.LoadAll(scenariosDir())
+	for _, s := range all {
+		if s.Image != "" && !seen[s.Image] {
+			seen[s.Image] = true
+			imgs = append(imgs, s.Image)
+		}
+	}
+	return imgs
+}
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -118,11 +135,23 @@ func run(args []string) error {
 		return cmdList()
 	case "build":
 		if dir := filepath.Join(home(), "images", "lab-base"); fileExists(filepath.Join(dir, "Dockerfile")) {
-			return lab.Build(dir, baseImage)
+			if err := lab.Build(dir, baseImage); err != nil {
+				return err
+			}
+			// Dentro do repositório, constrói também as imagens derivadas (ex.: lab-zabbix)
+			if dir := filepath.Join(home(), "images", "lab-zabbix"); fileExists(filepath.Join(dir, "Dockerfile")) {
+				return lab.Build(dir, zabbixImage)
+			}
+			return nil
 		}
 		return lab.BuildDockerfile(incidentezero.LabBaseDockerfile, baseImage)
 	case "pull":
-		return lab.Pull(baseImage)
+		for _, img := range labImages() {
+			if err := lab.Pull(img); err != nil {
+				return err
+			}
+		}
+		return nil
 	case "doctor":
 		return cmdDoctor()
 	case "start":
@@ -396,6 +425,13 @@ func cmdDoctor() error {
 		}
 		check(lab.ImageExists(baseImage), "Imagem base presente: "+baseImage,
 			"Imagem base ausente: rode `iz pull` (ou `iz build`)")
+		for _, img := range labImages()[1:] {
+			if lab.ImageExists(img) {
+				fmt.Println("✅ Imagem presente:", img)
+			} else {
+				fmt.Println("⚠️  Imagem ausente:", img, "(baixada no primeiro uso, ou rode `iz pull`)")
+			}
+		}
 	}
 	all, err := scenario.LoadAll(scenariosDir())
 	check(err == nil && len(all) > 0, fmt.Sprintf("%d cenários em %s", len(all), scenariosDir()),

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Sobe o Zabbix do lab (banco, server, frontend e agente) e espera a API responder.
+set -euo pipefail
+
+# /var/log pode ser uma partição vazia (tmpfs) no lab
+install -d -o zabbix -g zabbix -m 0755 /var/log/zabbix
+install -d -o mysql -g adm -m 2750 /var/log/mysql
+install -d -o www-data -g adm -m 0755 /var/log/nginx
+
+systemctl enable --now mariadb >/dev/null 2>&1
+systemctl enable --now zabbix-server php8.3-fpm zabbix-agent2 >/dev/null 2>&1
+systemctl enable nginx >/dev/null 2>&1
+systemctl restart nginx
+
+for _ in $(seq 1 60); do
+  zbx-api apiinfo.version >/dev/null 2>&1 && exit 0
+  sleep 1
+done
+echo "zabbix-lab-up: a API do Zabbix não respondeu" >&2
+exit 1
