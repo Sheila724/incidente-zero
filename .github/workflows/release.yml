@@ -64,7 +64,7 @@ jobs:
           fi
 
   imagem:
-    name: Imagem base no GHCR
+    name: Imagens dos labs no GHCR
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -89,5 +89,20 @@ jobs:
           tags: |
             ghcr.io/sheila724/incidente-zero/lab-base:${{ github.ref_name }}
             ghcr.io/sheila724/incidente-zero/lab-base:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=lab-base
+          cache-to: type=gha,mode=max,scope=lab-base
+
+      # Imagem com Zabbix, construída em cima da base desta mesma versão
+      - name: Build e push lab-zabbix (amd64 e arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: images/lab-zabbix
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            BASE=ghcr.io/sheila724/incidente-zero/lab-base:${{ github.ref_name }}
+          tags: |
+            ghcr.io/sheila724/incidente-zero/lab-zabbix:${{ github.ref_name }}
+            ghcr.io/sheila724/incidente-zero/lab-zabbix:latest
+          cache-from: type=gha,scope=lab-zabbix
+          cache-to: type=gha,mode=max,scope=lab-zabbix

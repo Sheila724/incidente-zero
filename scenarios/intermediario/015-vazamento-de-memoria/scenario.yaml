@@ -1,0 +1,71 @@
+apiVersion: incidente-zero/v1
+
+id: 015-vazamento-de-memoria
+title: "Memória crescendo sem parar após deploy"
+level: intermediario
+track: zabbix
+estimated_minutes: 30
+tags: [zabbix, memória, vazamento, gráficos, systemd, deploy]
+
+learning_objectives:
+  - Partir de um alerta do Zabbix e usar o gráfico para entender a tendência
+  - Relacionar o início do problema a uma mudança (deploy)
+  - Medir a memória de um processo (ps, systemctl status)
+  - Diferenciar mitigação (reiniciar) de correção (configurar o limite)
+  - Registrar no Zabbix o que foi feito, como num plantão de verdade
+
+image: ghcr.io/sheila724/incidente-zero/lab-zabbix:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 1
+  memory: 1792m
+  pids: 2048
+  mounts: []
+
+apps:
+  - name: zabbix
+    title: Zabbix
+    port: 8081
+    login: Admin
+    password: zabbix
+
+alert:
+  severity: media
+  source: zabbix
+  title: "Loja Exemplo usando muita memória em loja-web-01"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Veja o incidente no Zabbix
+    text: "Abra o **Zabbix** (Admin / zabbix), em *Monitoramento → Incidentes*. Qual item disparou o alerta?"
+  - title: Olhe a tendência
+    text: "Em *Monitoramento → Dados recentes*, filtre por loja-web-01 e abra o **gráfico** de *Loja Exemplo: memória do processo*. A memória sobe aos poucos ou de uma vez? Desde quando?"
+  - title: Confirme no servidor
+    text: "No terminal: `systemctl status app` e `ps -o pid,rss,cmd -u app`. Rode de novo depois de 30 segundos: a memória continua subindo?"
+  - title: Descubra o que mudou
+    text: "Leia /opt/app/CHANGELOG.md e /etc/app/app.env. O que a versão 2.5.0 trouxe?"
+  - title: Corrija sem desfazer o deploy
+    text: "Configure um limite para o cache de sessões e reinicie a loja."
+    verify: "[ \"$(curl -s http://127.0.0.1:8080/health | jq -r '.session_cache_max')\" -gt 0 ] 2>/dev/null"
+  - title: Registre no Zabbix
+    text: "Quando o incidente estiver *Resolvido*, clique em **Atualizar** nele e escreva o que você fez. É assim que o próximo plantão fica sabendo."
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

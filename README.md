@@ -63,6 +63,14 @@ Rodando de dentro do repositório, o `iz` usa a pasta `scenarios/` local, então
 - **Monitoramento ao vivo**: HTTP, porta 80, CPU, memória, disco e inodes, que mudam enquanto você corrige.
 - Botão **Verificar** (`Ctrl+Enter`) e, depois de resolver, o atalho para o **próximo incidente**.
 
+### Zabbix de verdade nos labs
+
+Os cenários 014 e 015 rodam um **Zabbix 7.0 LTS completo dentro do lab** (server, frontend em português e agente 2). O botão **Zabbix**, no topo do lab, abre o frontend pela própria interface do Incidente Zero (usuário `Admin`, senha `zabbix`). O incidente começa como no dia a dia de um NOC: com um alerta no Zabbix.
+
+No terminal do lab, `zbx-api` consulta a API do Zabbix, por exemplo: `zbx-api problem.get '{"output":["name","severity"]}'`.
+
+Esses cenários usam a imagem `lab-zabbix` (maior que a base) e precisam de cerca de 1,5 GB de RAM livres.
+
 ### Pontuação
 
 | Regra | Pontos |
@@ -141,7 +149,7 @@ iz stop         # destrói o lab
 | 007 | SSH recusando a chave do deploy | `ssh -v`, log do sshd, `StrictModes`, permissões de `~/.ssh` | ✅ |
 | 008 | "Disco cheio" com espaço sobrando | inodes, `df -i`, `find -delete` seletivo | ✅ |
 
-### Trilha intermediária: rede, web, banco e Zabbix 🚧
+### Trilha intermediária: rede, web, banco e Zabbix
 
 | ID | Incidente | O que você pratica | Status |
 |---|---|---|---|
@@ -150,7 +158,8 @@ iz stop         # destrói o lab
 | 011 | 502 Bad Gateway após deploy | proxy reverso, `upstream`, `error.log`, `ss -ltnp` | ✅ |
 | 012 | Banco de dados recusando conexões | `SHOW PROCESSLIST`, `KILL`, vazamento de conexões, `MAX_USER_CONNECTIONS` | ✅ |
 | 013 | Banco travado por disco cheio | binlog, `PURGE BINARY LOGS`, expiração, disco cheio no MariaDB | ✅ |
-| — | Alertas reais do **Zabbix** | | 🚧 |
+| 014 | Monitoramento cego: host sem dados no Zabbix | `zabbix_get`, `Server=`/`ServerActive=`, log do agente, falha silenciosa | ✅ |
+| 015 | Memória crescendo sem parar após deploy | gráficos do Zabbix, RSS, vazamento, `MemoryMax`, registrar o incidente no Zabbix | ✅ |
 
 ### Próximas trilhas
 
@@ -165,7 +174,7 @@ iz stop         # destrói o lab
 - [x] Trilha iniciante completa (001–008)
 - [x] Interface web com terminal no navegador e monitoramento ao vivo
 - [x] Pontuação, MTTR pessoal e histórico de plantões
-- [ ] Trilha intermediária: rede, web, banco e **Zabbix** (rede, web e banco prontos)
+- [x] Trilha intermediária: rede, web, banco e **Zabbix**
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
 - [ ] Postmortem guiado, gerado a partir do que você fez no lab
 - [x] Binários prontos para download, instalador e CI
@@ -186,6 +195,7 @@ Navegador ── HTTP / WebSocket ──▶ iz ui (Go, interface embutida)
 - **Backend:** Go, um binário só, com a interface embutida (`go:embed`). O terminal usa WebSocket e PTY, e só aceita conexões da mesma origem.
 - **Interface:** Svelte 5 + Vite, xterm.js para o terminal e fontes locais, sem chamadas externas.
 - **Cenários:** cada um é uma pasta com `scenario.yaml`, conteúdo em Markdown e scripts `setup`, `inject` e `check`. Adicionar um cenário não exige mexer em código.
+- **Interfaces dentro do lab:** um cenário pode declarar `apps` (como o frontend do Zabbix). A interface do iz publica cada uma em `/apps/<cenário>/<nome>/`, atrás da mesma autenticação.
 
 ```
 scenarios/iniciante/001-disco-cheio/
@@ -204,7 +214,7 @@ scenarios/iniciante/001-disco-cheio/
 
 ## Publicando uma versão
 
-Uma tag `v*` dispara o workflow de release, que roda os testes, compila os binários para Linux e macOS (amd64 e arm64), publica a release com os checksums e envia a imagem base para o GHCR:
+Uma tag `v*` dispara o workflow de release, que roda os testes, compila os binários para Linux e macOS (amd64 e arm64), publica a release com os checksums e envia as imagens dos labs (`lab-base` e `lab-zabbix`) para o GHCR. Antes de criar a tag, atualize o `main` local (`git pull`) e confira o commit com `git log --oneline -1`:
 
 ```bash
 git tag v0.1.0

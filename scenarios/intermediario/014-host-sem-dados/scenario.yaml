@@ -1,0 +1,75 @@
+apiVersion: incidente-zero/v1
+
+id: 014-host-sem-dados
+title: "Monitoramento cego: host sem dados no Zabbix"
+level: intermediario
+track: zabbix
+estimated_minutes: 30
+tags: [zabbix, agente, zabbix_get, falha silenciosa, disco]
+
+learning_objectives:
+  - Ler a disponibilidade de um host e os problemas no Zabbix
+  - Testar o agente como o Zabbix Server testa (zabbix_get)
+  - Entender os parâmetros Server e ServerActive do agente
+  - Ler o log do agente para achar o motivo da recusa
+  - Perceber o que o monitoramento deixou de ver enquanto estava cego
+
+image: ghcr.io/sheila724/incidente-zero/lab-zabbix:latest
+hostname: loja-web-01
+user: aluno
+requires: []
+resources:
+  cpus: 1
+  memory: 1536m
+  pids: 2048
+  mounts:
+    - type: tmpfs
+      path: /var/log
+      size: 200m
+
+apps:
+  - name: zabbix
+    title: Zabbix
+    port: 8081
+    login: Admin
+    password: zabbix
+
+alert:
+  severity: alta
+  source: zabbix
+  title: "Agente Zabbix sem comunicação em loja-web-01"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Veja o problema no Zabbix
+    text: "Clique em **Zabbix** no topo (Admin / zabbix). Em *Monitoramento → Incidentes* e *Monitoramento → Hosts*, como está o loja-web-01? O ícone ZBX está vermelho?"
+  - title: Teste o agente como o Zabbix testa
+    text: "No terminal: `zabbix_get -s 127.0.0.1 -k agent.ping`. O agente está rodando (`systemctl status zabbix-agent2`)?"
+  - title: Leia o log do agente
+    text: "Use `sudo tail -n 20 /var/log/zabbix/zabbix_agent2.log`. Por que a conexão é recusada?"
+  - title: Corrija a configuração do agente
+    text: "Em /etc/zabbix/zabbix_agent2.conf, `Server=` e `ServerActive=` precisam apontar para o Zabbix Server deste ambiente (127.0.0.1). Reinicie o agente."
+    verify: "[ \"$(zabbix_get -s 127.0.0.1 -k agent.ping 2>/dev/null)\" = 1 ]"
+  - title: Veja o que estava escondido
+    text: "Com os dados voltando, volte em *Monitoramento → Incidentes*. Apareceu algo novo?"
+  - title: Resolva o problema escondido
+    text: "Descubra o que encheu /var/log e libere o espaço. O incidente deve ficar como *Resolvido* no Zabbix."
+    verify: "[ $(df --output=pcent /var/log | tail -1 | tr -dc '0-9') -le 90 ]"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

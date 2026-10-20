@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# zabbix-lab-host — cadastra o host do lab no Zabbix com o monitoramento básico:
+#   disponibilidade do agente, uso de /var/log, carga da CPU e memória.
+#   zabbix-lab-host <host>
+# Imprime o hostid. Itens e triggers extras ficam por conta de cada cenário.
+set -euo pipefail
+
+nome=${1:?uso: zabbix-lab-host <host>}
+
+# O host padrão "Zabbix server" só faria barulho no lab
+srv=$(zbx-api host.get '{"filter":{"host":["Zabbix server"]},"output":["hostid"]}' | jq -r '.[0].hostid // empty')
+[ -n "$srv" ] && zbx-api host.update "{\"hostid\":\"$srv\",\"status\":1}" >/dev/null
+
+grupo=$(zbx-api hostgroup.get '{"filter":{"name":["Loja Exemplo"]},"output":["groupid"]}' | jq -r '.[0].groupid // empty')
+[ -n "$grupo" ] || grupo=$(zbx-api hostgroup.create '{"name":"Loja Exemplo"}' | jq -r '.groupids[0]')
+
+host=$(zbx-api host.create "{
+  \"host\":\"$nome\",
+  \"groups\":[{\"groupid\":\"$grupo\"}],
+  \"interfaces\":[{\"type\":1,\"main\":1,\"useip\":1,\"ip\":\"127.0.0.1\",\"dns\":\"\",\"port\":\"10050\"}]
+}" | jq -r '.hostids[0]')
+iface=$(zbx-api hostinterface.get "{\"hostids\":\"$host\",\"output\":[\"interfaceid\"]}" | jq -r '.[0].interfaceid')
+
+item() { # nome chave tipo_valor intervalo [unidade]
+  zbx-api item.create "{\"hostid\":\"$host\",\"interfaceid\":\"$iface\",\"type\":0,
+    \"name\":\"$1\",\"key_\":\"$2\",\"value_type\":$3,\"delay\":\"$4\",\"units\":\"${5:-}\"}" >/dev/null
+}
+item "Agente Zabbix: ping"        "agent.ping"                  3 10s
+item "Uso de /var/log"            "vfs.fs.size[/var/log,pused]" 0 10s %
+item "Carga da CPU (1 min)"       "system.cpu.load[all,avg1]"   0 10s
+
+zbx-api trigger.create "[
+  {\"description\":\"Agente Zabbix sem comunicação em {HOST.NAME}\",
+   \"expression\":\"nodata(/$nome/agent.ping,30s)=1\",\"priority\":4},
+  {\"description\":\"Pouco espaço em /var/log em {HOST.NAME} ({ITEM.LASTVALUE1})\",
+   \"expression\":\"last(/$nome/vfs.fs.size[/var/log,pused])>90\",\"priority\":4}
+]" >/dev/null
+
+# Espera os primeiros dados chegarem
+for _ in $(seq 1 60); do
+  v=$(zbx-api item.get "{\"hostids\":\"$host\",\"filter\":{\"key_\":\"agent.ping\"},\"output\":[\"lastvalue\",\"lastclock\"]}" \
+      | jq -r '.[0] | select(.lastclock != "0") | .lastvalue')
+  if [ "$v" = "1" ]; then
+    echo "$host"
+    exit 0
+  fi
+  sleep 2
+done
+echo "zabbix-lab-host: o Zabbix não recebeu dados do agente" >&2
+exit 1

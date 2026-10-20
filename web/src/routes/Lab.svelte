@@ -321,6 +321,19 @@
           <span>tempo de plantão</span>
         </div>
       {/if}
+      {#each detail.apps ?? [] as app (app.name)}
+        <a
+          class="btn"
+          href={app.url}
+          target="_blank"
+          rel="noopener"
+          title={app.login ? `Usuário: ${app.login} · senha: ${app.password}` : `Abrir ${app.title}`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          {app.title}
+          {#if app.login}<span class="mono faint small">{app.login} / {app.password}</span>{/if}
+        </a>
+      {/each}
       <button type="button" class="btn" onclick={() => (tab = 'dicas')}>
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"></path></svg>
         Dica <span class="mono faint small">{hintsRevealed}/{hints.length}</span>

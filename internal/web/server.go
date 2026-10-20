@@ -45,12 +45,19 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/scenarios/{id}/hints/{n}", s.hint)
 	mux.HandleFunc("GET /api/scenarios/{id}/solution", s.solution)
 	mux.HandleFunc("GET /api/scenarios/{id}/terminal", s.terminal)
+	mux.HandleFunc("/apps/{id}/{app}/", s.appProxy)
+	mux.HandleFunc("/apps/{id}/{app}", s.appProxy)
 	mux.Handle("/", s.spa())
 	return securityHeaders(mux)
 }
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Interfaces dos labs (ex.: Zabbix) trazem os próprios cabeçalhos
+		if strings.HasPrefix(r.URL.Path, "/apps/") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		h := w.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
@@ -277,6 +284,7 @@ func (s *Server) detail(w http.ResponseWriter, r *http.Request) {
 		"hints":          hs,
 		"startedAt":      started,
 		"solutionViewed": rec.SolutionViewed,
+		"apps":           appsDTO(sc),
 	})
 }
 
@@ -503,4 +511,24 @@ func (s *Server) spa() http.Handler {
 		}
 		files.ServeHTTP(w, r)
 	})
+}
+
+type appDTO struct {
+	Name     string `json:"name"`
+	Title    string `json:"title"`
+	URL      string `json:"url"`
+	Login    string `json:"login,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+func appsDTO(sc *scenario.Scenario) []appDTO {
+	out := make([]appDTO, 0, len(sc.Apps))
+	for _, a := range sc.Apps {
+		title := a.Title
+		if title == "" {
+			title = a.Name
+		}
+		out = append(out, appDTO{a.Name, title, "/apps/" + sc.ID + "/" + a.Name + "/", a.Login, a.Password})
+	}
+	return out
 }

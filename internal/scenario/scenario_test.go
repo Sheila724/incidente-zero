@@ -100,6 +100,17 @@ func TestCenariosDoRepositorio(t *testing.T) {
 				}
 			}
 
+			apps := map[string]bool{}
+			for _, a := range s.Apps {
+				if !regexp.MustCompile(`^[a-z0-9-]+$`).MatchString(a.Name) || a.Port <= 0 {
+					t.Errorf("app inválido (name em minúsculas e port > 0): %+v", a)
+				}
+				if apps[a.Name] {
+					t.Errorf("app repetido: %s", a.Name)
+				}
+				apps[a.Name] = true
+			}
+
 			for _, m := range s.Resources.Mounts {
 				if m.Type != "tmpfs" || !strings.HasPrefix(m.Path, "/") {
 					t.Errorf("mount inválido: %+v", m)

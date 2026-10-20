@@ -1,0 +1,24 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      No Zabbix, em *Monitoramento → Dados recentes*, abra o gráfico de
+      "Loja Exemplo: memória do processo". Uma linha que sobe sem parar, sem
+      nunca descer, é o desenho clássico de um vazamento de memória. Quando
+      a subida começou?
+
+  - level: 2
+    cost: 20
+    text: >
+      Reiniciar a loja derruba a memória, mas ela volta a subir no mesmo ritmo.
+      Leia /opt/app/CHANGELOG.md: a 2.5.0 trouxe um cache de sessões. Como ele
+      está configurado em /etc/app/app.env?
+
+  - level: 3
+    cost: 40
+    text: >
+      `SESSION_CACHE_MAX=0` significa "sem limite". Troque para o valor
+      recomendado (`SESSION_CACHE_MAX=2000`) e rode `sudo systemctl restart app`.
+      Quando o incidente ficar Resolvido, clique em **Atualizar** nele, no
+      Zabbix, e escreva o que você fez. Se ele já sumiu da lista, use
+      *Mostrar: Histórico* no filtro.
