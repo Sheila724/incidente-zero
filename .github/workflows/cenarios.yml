@@ -1,0 +1,93 @@
+name: Cenários (ponta a ponta)
+
+# Para cada cenário: sobe o lab com a falha, confere que o check falha,
+# aplica a solução de referência (scripts/solve.sh) e confere que o check passa.
+
+on:
+  pull_request:
+    paths:
+      - "scenarios/**"
+      - "images/**"
+      - "cmd/**"
+      - "internal/**"
+      - ".github/workflows/cenarios.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1" # toda segunda, 06:00 em Brasília
+
+permissions:
+  contents: read
+
+jobs:
+  plano:
+    name: Quais cenários testar
+    runs-on: ubuntu-latest
+    outputs:
+      cenarios: ${{ steps.plano.outputs.cenarios }}
+      imagens: ${{ steps.plano.outputs.imagens }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: plano
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          todos=$(find scenarios -mindepth 2 -maxdepth 2 -type d -printf '%f\n' | sort)
+          imagens=false
+          lista="$todos"
+          if [ "$EVENTO" = "pull_request" ]; then
+            mudou=$(git diff --name-only "$BASE"...HEAD)
+            if echo "$mudou" | grep -q '^images/'; then imagens=true; fi
+            # Mudou o iz, as imagens ou este workflow: testa tudo. Senão, só os cenários alterados.
+            if ! echo "$mudou" | grep -qE '^(images|cmd|internal)/|^\.github/workflows/cenarios\.yml$'; then
+              lista=$(echo "$mudou" | sed -nE 's#^scenarios/[^/]+/([^/]+)/.*#\1#p' | sort -u)
+            fi
+          fi
+          echo "cenarios=$(printf '%s\n' "$lista" | jq -R . | jq -sc 'map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+          echo "imagens=$imagens" >> "$GITHUB_OUTPUT"
+          echo "Cenários: $(echo $lista)"; echo "Construir imagens: $imagens"
+
+  cenario:
+    name: ${{ matrix.cenario }}
+    needs: plano
+    if: needs.plano.outputs.cenarios != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        cenario: ${{ fromJSON(needs.plano.outputs.cenarios) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Compila o iz
+        run: go build -o iz ./cmd/iz
+
+      - name: Imagem do lab
+        env:
+          CONSTRUIR: ${{ needs.plano.outputs.imagens }}
+          CENARIO: ${{ matrix.cenario }}
+        run: |
+          img=$(awk '/^image:/ {print $2}' scenarios/*/"$CENARIO"/scenario.yaml)
+          base=ghcr.io/sheila724/incidente-zero/lab-base:latest
+          if [ "$CONSTRUIR" = "true" ]; then
+            # As imagens mudaram neste PR: constrói a partir do repositório
+            docker build -q -t "$base" images/lab-base
+            if [ "$img" != "$base" ]; then
+              docker build -q -t "$img" "images/$(basename "${img%%:*}")"
+            fi
+          else
+            docker pull -q "$img"
+          fi
+
+      - name: Selftest
+        env:
+          IZ_RUNTIME: local
+        run: ./iz selftest "${{ matrix.cenario }}"

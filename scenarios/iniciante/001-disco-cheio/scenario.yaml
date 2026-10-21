@@ -49,6 +49,7 @@ scripts:
   setup: scripts/setup.sh     # ambiente saudável
   inject: scripts/inject.sh   # injeta a falha
   check: scripts/check.sh     # exit 0 = resolvido
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
 
 modes: [guiado, plantao]
 

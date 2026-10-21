@@ -41,6 +41,7 @@ scripts:
   setup: scripts/setup.sh
   inject: scripts/inject.sh
   check: scripts/check.sh
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
 
 modes: [guiado, plantao]
 

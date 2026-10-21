@@ -41,6 +41,7 @@ Uso:
   iz concepts [cenário]    mostra os conceitos para estudar
   iz solution [cenário]    mostra a solução comentada e a causa raiz
   iz stop  [cenário]       destrói o lab
+  iz selftest [cenários]   testa os cenários de ponta a ponta (para quem cria cenários)
   iz version               mostra a versão
 
 O cenário pode ser o ID completo ou o prefixo: "001" = "001-disco-cheio".
@@ -154,6 +155,8 @@ func run(args []string) error {
 		return nil
 	case "doctor":
 		return cmdDoctor()
+	case "selftest":
+		return cmdSelftest(rest)
 	case "start":
 		if len(rest) < 1 {
 			return fmt.Errorf("informe o cenário: iz start 001")

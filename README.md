@@ -133,6 +133,7 @@ iz stop         # destrói o lab
 | `iz concepts` | Conceitos para estudar antes |
 | `iz solution` | Solução comentada, causa raiz e referências |
 | `iz stop` | Destrói o lab |
+| `iz selftest [cenários]` | Testa os cenários de ponta a ponta (para quem cria cenários) |
 
 ## Cenários
 
@@ -223,14 +224,13 @@ git push origin v0.1.0
 
 ## Contribuindo
 
-Quer criar um cenário? Use o `001-disco-cheio` como modelo. Algumas regras que mantêm a qualidade:
+Quer criar um cenário? O passo a passo completo está no [CONTRIBUTING.md](CONTRIBUTING.md). Em resumo:
 
 - **O `inject.sh` termina com uma autoverificação.** Se a falha não aparecer, o lab não começa.
 - **O `check.sh` confere a causa raiz**, não só o sintoma, e não aceita "soluções" que criam outro problema (como `chmod 777` ou desligar verificações de segurança).
-- **Partições de teste com `tmpfs`** nos incidentes de disco (`size` e, se precisar, `inodes` em `resources.mounts`).
-- **Passos do modo guiado com `verify`** sempre que der para verificar automaticamente.
+- **Cada cenário tem uma solução de referência** (`scripts/solve.sh`), e `iz selftest <cenário>` testa tudo de ponta a ponta: a falha aparece, o check reprova e, depois da solução, aprova.
 
-O CI valida todos os cenários automaticamente (`go test ./...`): campos obrigatórios, arquivos referenciados, dicas, autoverificação no `inject.sh` e `shellcheck` nos scripts.
+O CI valida todos os cenários (`go test ./...`, `shellcheck`) e, em cada PR, roda o `selftest` dos cenários alterados num lab de verdade. Toda segunda-feira, todos os cenários são testados de novo.
 
 Toda contribuição de incidente real que você já viveu, anonimizado, é bem-vinda.
 
