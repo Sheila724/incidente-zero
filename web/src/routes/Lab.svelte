@@ -366,7 +366,7 @@
           {#if result.solutionViewed}<p class="faint small">A solução foi aberta antes da correção, então esta tentativa não pontua.</p>{/if}
           <div class="result-actions">
             <a class="btn btn-primary" href={`#/postmortem/${id}`}>Escrever postmortem</a>
-            <button type="button" class="btn" onclick={() => loadSolution(true)}>Ver solução e causa raiz</button>
+            <button type="button" class="btn" onclick={() => loadSolution(true)}>Solução e causa raiz</button>
             {#if nextId}
               <a class="btn" href={`#/lab/${nextId}`}>Próximo incidente</a>
             {:else}
@@ -559,18 +559,20 @@
 
   /* lab */
   .lab { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; align-items: stretch; }
-  .side { flex: 1 1 360px; min-width: 0; max-height: calc(100vh - 150px); display: flex; flex-direction: column; overflow: hidden; }
+  .side { flex: 1 1 360px; min-width: 0; max-height: calc(100vh - 150px); display: flex; flex-direction: column; overflow-y: auto; }
   .work { flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
   .term-wrap { height: max(420px, calc(100vh - 470px)); }
 
-  .result { margin: 14px 14px 0; padding: 16px; border-radius: 10px; background: #0D1A14; border: 1px solid var(--green-line); display: flex; flex-direction: column; gap: 12px; }
+  .result { margin: 12px 12px 0; padding: 12px 14px; border-radius: 10px; background: #0D1A14; border: 1px solid var(--green-line); display: flex; flex-direction: column; gap: 8px; flex: none; }
   .result-head { display: flex; align-items: center; gap: 10px; }
   .result-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .result-nums div { display: flex; flex-direction: column; }
-  .result-nums .mono { font-size: 20px; font-weight: 700; }
+  .result-nums .mono { font-size: 18px; font-weight: 700; }
   .result-nums small { color: var(--faint); font-size: 12px; }
   .result p { margin: 0; }
-  .result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .result-actions .btn { min-height: 36px; padding: 0 10px; font-size: 14px; }
+  .result-actions .btn-primary { grid-column: 1 / -1; }
 
   .tabs { display: flex; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; }
   .tabs button {
@@ -579,7 +581,7 @@
   }
   .tabs button:hover { color: var(--text); }
   .tabs button.sel { color: var(--text); border-bottom-color: var(--accent); }
-  .tab-body { padding: 20px; overflow-y: auto; flex: 1; min-height: 0; }
+  .tab-body { padding: 20px; overflow-y: auto; flex: 1; min-height: 260px; }
 
   .steps { list-style: none; margin: 0; padding: 0; }
   .steps li { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #18202B; }
