@@ -1,0 +1,63 @@
+apiVersion: incidente-zero/v1
+
+id: 017-imagepullbackoff
+title: "Deploy travado em ImagePullBackOff"
+level: avancado
+track: kubernetes
+estimated_minutes: 25
+tags: [kubernetes, kubectl, imagepullbackoff, registry, deploy, rollout]
+
+learning_objectives:
+  - Acompanhar um rollout com kubectl rollout status e kubectl get rs
+  - Entender por que o rolling update manteve a loja no ar
+  - Ler o motivo de um ImagePullBackOff nos eventos do pod
+  - Consultar as tags que existem numa registry
+  - Concluir o deploy corrigindo a imagem, em vez de desfazer
+
+image: ghcr.io/sheila724/incidente-zero/lab-k3s:latest
+hostname: loja-k8s-01
+user: aluno
+requires: []
+resources:
+  cpus: 2
+  memory: 2g
+  pids: 4096
+  mounts: []
+
+alert:
+  severity: alta
+  source: pipeline
+  title: "Deploy da Loja Exemplo 2.6 não concluiu (ProgressDeadlineExceeded)"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Veja o rollout
+    text: "Rode `kubectl rollout status deploy/loja-web` e `kubectl get pods`. Quantos pods estão rodando e em qual versão? Algum está com problema?"
+  - title: Entenda por que a loja não caiu
+    text: "Rode `kubectl get rs`. São dois ReplicaSets: o da versão antiga e o da nova. Quantos pods prontos tem cada um?"
+  - title: Leia o motivo
+    text: "Use `kubectl describe pod <pod com problema>` e leia os **Events** no final. Qual imagem o Kubernetes tentou baixar? O que a registry respondeu?"
+  - title: Consulte a registry
+    text: "A registry interna responde em `http://registry.loja.local:5000`. Liste as tags publicadas: `curl -s http://registry.loja.local:5000/v2/loja-web/tags/list`. Leia também o log do pipeline em `/var/log/pipeline/`."
+  - title: Conclua o deploy
+    text: "Coloque a 2.6 no ar com a imagem certa (`kubectl set image ...`) e acompanhe com `kubectl rollout status`."
+    verify: "kubectl -n loja get deploy loja-web -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -qx 'registry.loja.local/loja-web:2.6'"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

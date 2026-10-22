@@ -1,0 +1,25 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      `Running` quer dizer que o processo está vivo; `READY 0/1` quer dizer
+      que o Kubernetes não considera o pod pronto para receber clientes. O
+      Service só manda tráfego para pods prontos. Veja quantos endereços ele
+      tem com `kubectl describe svc loja-web` (linha Endpoints).
+
+  - level: 2
+    cost: 20
+    text: >
+      Quem decide se o pod está pronto é a readiness probe. Nos eventos de
+      `kubectl describe pod <pod>` aparece o caminho que ela chama e o código
+      HTTP que recebe. Compare com o que a aplicação atende:
+      `kubectl exec <pod> -- wget -qO- http://localhost:8080/health`.
+
+  - level: 3
+    cost: 40
+    text: >
+      A probe foi trocada para `/healthz`, mas a aplicação só atende
+      `/health` (responde 404 para o resto). Corrija com
+      `kubectl edit deploy loja-web` (em readinessProbe → httpGet → path) ou com
+      `kubectl patch`. Em poucos segundos os pods ficam 1/1 e o Service volta a
+      ter endpoints.

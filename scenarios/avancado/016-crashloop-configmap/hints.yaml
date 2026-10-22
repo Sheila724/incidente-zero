@@ -1,0 +1,24 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      CrashLoopBackOff quer dizer: o container inicia, morre e o Kubernetes
+      espera cada vez mais antes de tentar de novo. O motivo quase sempre está
+      no que o container escreveu antes de morrer: `kubectl logs <pod> --previous`.
+
+  - level: 2
+    cost: 20
+    text: >
+      A aplicação reclama de uma variável de ambiente. O Deployment não define
+      variáveis uma a uma: ele carrega todas de uma ConfigMap (`envFrom`).
+      Compare o nome que a aplicação espera com as chaves de
+      `kubectl get configmap loja-config -o yaml`. Repare nas anotações dela.
+
+  - level: 3
+    cost: 40
+    text: >
+      A chave foi renomeada de `DATABASE_URL` para `DB_URL`. Crie de novo a
+      chave `DATABASE_URL`, com o mesmo valor, usando
+      `kubectl edit configmap loja-config`, e depois rode
+      `kubectl rollout restart deploy/loja-web`. Variáveis de ambiente só são
+      lidas quando o container inicia.

@@ -120,3 +120,18 @@ jobs:
             ghcr.io/sheila724/incidente-zero/lab-zabbix:latest
           cache-from: type=gha,scope=lab-zabbix
           cache-to: type=gha,mode=max,scope=lab-zabbix
+
+      # Imagem com Kubernetes (k3s), também em cima da base desta versão
+      - name: Build e push lab-k3s (amd64 e arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: images/lab-k3s
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            BASE=ghcr.io/sheila724/incidente-zero/lab-base:${{ github.ref_name }}
+          tags: |
+            ghcr.io/sheila724/incidente-zero/lab-k3s:${{ github.ref_name }}
+            ghcr.io/sheila724/incidente-zero/lab-k3s:latest
+          cache-from: type=gha,scope=lab-k3s
+          cache-to: type=gha,mode=max,scope=lab-k3s

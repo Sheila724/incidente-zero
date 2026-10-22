@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Sobe o Kubernetes do lab (k3s de nó único) e a infraestrutura da Loja Exemplo:
+#   - nó loja-k8s-01 Ready e CoreDNS no ar
+#   - registry interna registry.loja.local:5000 e as imagens da loja já no nó
+#   - namespace "loja" e o nginx do servidor (porta 80) apontando para o NodePort 30080
+# Uso: k3s-lab-up [tag ...]   (tags publicadas de loja-web; padrão: 2.4 2.5 2.6)
+set -euo pipefail
+umask 022
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+[ $# -gt 0 ] || set -- 2.4 2.5 2.6
+TAGS=("$@")
+
+grep -q 'registry.loja.local' /etc/hosts || echo '127.0.0.1 registry.loja.local' >> /etc/hosts
+printf '%s\n' "${TAGS[@]}" > /srv/registry/loja-web.tags
+systemctl enable --now registry-loja >/dev/null 2>&1
+systemctl enable --now k3s >/dev/null 2>&1
+
+for _ in $(seq 1 150); do
+  kubectl get node loja-k8s-01 2>/dev/null | grep -q ' Ready' && break
+  sleep 2
+done
+kubectl wait --for=condition=Ready node/loja-k8s-01 --timeout=60s >/dev/null
+# O CoreDNS é criado pelo k3s alguns segundos depois de o nó ficar pronto
+for _ in $(seq 1 90); do
+  kubectl -n kube-system get deploy coredns >/dev/null 2>&1 && break
+  sleep 2
+done
+kubectl -n kube-system rollout status deploy/coredns --timeout=240s >/dev/null
+
+# As imagens da loja: em lab, todas partem do busybox embutido no k3s
+base=docker.io/rancher/mirrored-library-busybox:1.36.1
+for _ in $(seq 1 60); do
+  k3s ctr -n k8s.io images ls -q | grep -qx "$base" && break
+  sleep 2
+done
+for t in "${TAGS[@]}"; do
+  k3s ctr -n k8s.io images tag --force "$base" "registry.loja.local/loja-web:$t" >/dev/null
+done
+
+kubectl get ns loja >/dev/null 2>&1 || kubectl create ns loja >/dev/null
+# Contexto padrão no namespace da loja (para root e para o aluno)
+kubectl config set-context --current --namespace=loja >/dev/null
+
+cat > /etc/nginx/sites-available/loja <<'NGX'
+# Loja Exemplo: o tráfego entra pelo nginx e vai para o Service do Kubernetes
+server {
+    listen 80 default_server;
+    server_name _;
+    location / {
+        proxy_pass http://127.0.0.1:30080;
+        proxy_set_header Host $host;
+        proxy_connect_timeout 3s;
+    }
+}
+NGX
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/loja /etc/nginx/sites-enabled/loja
+systemctl enable nginx >/dev/null 2>&1
+systemctl restart nginx

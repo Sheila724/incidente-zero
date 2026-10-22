@@ -58,6 +58,7 @@ Variáveis:
 const (
 	baseImage   = "ghcr.io/sheila724/incidente-zero/lab-base:latest"
 	zabbixImage = "ghcr.io/sheila724/incidente-zero/lab-zabbix:latest"
+	k3sImage    = "ghcr.io/sheila724/incidente-zero/lab-k3s:latest"
 )
 
 // labImages lista as imagens usadas pelos cenários, começando pela base.
@@ -142,9 +143,13 @@ func run(args []string) error {
 			if err := lab.Build(dir, baseImage); err != nil {
 				return err
 			}
-			// Dentro do repositório, constrói também as imagens derivadas (ex.: lab-zabbix)
-			if dir := filepath.Join(home(), "images", "lab-zabbix"); fileExists(filepath.Join(dir, "Dockerfile")) {
-				return lab.Build(dir, zabbixImage)
+			// Dentro do repositório, constrói também as imagens derivadas
+			for _, d := range []struct{ dir, img string }{{"lab-zabbix", zabbixImage}, {"lab-k3s", k3sImage}} {
+				if dir := filepath.Join(home(), "images", d.dir); fileExists(filepath.Join(dir, "Dockerfile")) {
+					if err := lab.Build(dir, d.img); err != nil {
+						return err
+					}
+				}
 			}
 			return nil
 		}
