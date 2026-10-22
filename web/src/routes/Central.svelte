@@ -37,7 +37,8 @@
         installed: list.length,
         done,
         total,
-        segments: Array.from({ length: 8 }, (_, i) => i < Math.round((done / total) * 8))
+        // Um segmento por cenário da trilha
+        segments: Array.from({ length: total }, (_, i) => i < done)
       };
     })
   );
@@ -162,7 +163,7 @@
               <span class="mono tcount" style:color={tr.done ? tr.color : 'var(--faint)'}>{tr.done} / {tr.total}</span>
             </div>
             <span class="muted small">{tr.desc}</span>
-            <div class="segs" aria-hidden="true">
+            <div class="segs" aria-hidden="true" style:grid-template-columns={`repeat(${tr.total}, minmax(0, 1fr))`}>
               {#each tr.segments as on, i (i)}
                 <span style:background={on ? tr.color : '#1C2532'}></span>
               {/each}
@@ -293,7 +294,7 @@
   .tname { font-weight: 600; }
   .soon { font-size: 11px; color: var(--faint); border: 1px solid #263142; border-radius: 4px; padding: 0 6px; }
   .tcount { margin-left: auto; font-size: 13px; }
-  .segs { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+  .segs { display: grid; gap: 4px; }
   .segs span { height: 6px; border-radius: 2px; }
 
   .catalog { display: flex; flex-direction: column; gap: 14px; }
