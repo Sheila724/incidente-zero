@@ -10,7 +10,7 @@ export const sev = (s) => SEVERITY[s] || SEVERITY.media;
 export const LEVELS = [
   { id: 'iniciante', name: 'Iniciante', title: 'Trilha iniciante', desc: 'Linux e troubleshooting', planned: 8, color: 'var(--accent)' },
   { id: 'intermediario', name: 'Intermediário', title: 'Trilha intermediária', desc: 'Rede, web, banco e Zabbix', planned: 7, color: 'var(--blue)' },
-  { id: 'avancado', name: 'Avançado', title: 'Trilha avançada', desc: 'Kubernetes e incidentes em cascata', planned: 10, color: 'var(--red)' }
+  { id: 'avancado', name: 'Avançado', title: 'Trilha avançada', desc: 'Kubernetes e incidentes em cascata', planned: 5, color: 'var(--red)' }
 ];
 
 export function duration(totalSeconds) {

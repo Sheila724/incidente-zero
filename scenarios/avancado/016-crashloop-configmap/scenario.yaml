@@ -1,0 +1,63 @@
+apiVersion: incidente-zero/v1
+
+id: 016-crashloop-configmap
+title: "Loja fora do ar: pods em CrashLoopBackOff"
+level: avancado
+track: kubernetes
+estimated_minutes: 25
+tags: [kubernetes, kubectl, crashloopbackoff, configmap, logs]
+
+learning_objectives:
+  - Ler o estado dos pods com kubectl get e kubectl describe
+  - Entender o que é CrashLoopBackOff e por que apagar o pod não resolve
+  - Ler os logs da execução anterior de um container (kubectl logs --previous)
+  - Relacionar a falha a uma mudança de configuração (ConfigMap)
+  - Aplicar a correção e recriar os pods com kubectl rollout restart
+
+image: ghcr.io/sheila724/incidente-zero/lab-k3s:latest
+hostname: loja-k8s-01
+user: aluno
+requires: []
+resources:
+  cpus: 2
+  memory: 2g
+  pids: 4096
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Loja Exemplo fora do ar (HTTP 502) após manutenção do cluster"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Veja o estado dos pods
+    text: "Rode `kubectl get pods`. Em que estado estão os pods da `loja-web`? Quantas vezes eles já reiniciaram (coluna RESTARTS)?"
+  - title: Tente o óbvio
+    text: "Apague um dos pods com `kubectl delete pod <nome>`. O Deployment cria outro na hora. Ele sobe?"
+  - title: Leia o motivo
+    text: "Use `kubectl logs <pod> --previous` para ver o que o container escreveu antes de morrer. Depois veja os eventos com `kubectl describe pod <pod>`."
+  - title: Siga a configuração
+    text: "De onde vêm as variáveis de ambiente do container? Procure `envFrom` em `kubectl get deploy loja-web -o yaml` e compare com `kubectl get configmap loja-config -o yaml`."
+  - title: Corrija e recrie os pods
+    text: "Ajuste a configuração e faça os pods lerem o valor novo com `kubectl rollout restart deploy/loja-web`."
+    verify: "[ \"$(kubectl -n loja get deploy loja-web -o jsonpath='{.status.readyReplicas}')\" -ge 2 ] 2>/dev/null"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

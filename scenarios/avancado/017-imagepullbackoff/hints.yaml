@@ -1,0 +1,25 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      A loja continua no ar porque o rolling update só derruba um pod antigo
+      depois que um novo fica pronto. O pod novo nunca ficou pronto. Veja os
+      eventos dele com `kubectl describe pod <pod>`: o problema aparece antes
+      mesmo de o container existir.
+
+  - level: 2
+    cost: 20
+    text: >
+      `ImagePullBackOff` significa que o nó não conseguiu baixar a imagem. A
+      registry respondeu `not found`: o nome ou a tag não existem. Liste as tags
+      publicadas com `curl -s http://registry.loja.local:5000/v2/loja-web/tags/list`
+      e compare com a imagem que o Deployment pede.
+
+  - level: 3
+    cost: 40
+    text: >
+      O pipeline publicou a imagem com a tag `2.6`, mas aplicou o deploy com
+      `v2.6` (a tag do Git). Corrija com
+      `kubectl set image deploy/loja-web web=registry.loja.local/loja-web:2.6`
+      e acompanhe com `kubectl rollout status deploy/loja-web`. Desfazer o
+      deploy não resolve: a 2.6 precisa ir ao ar.

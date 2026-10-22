@@ -71,6 +71,12 @@ No terminal do lab, `zbx-api` consulta a API do Zabbix, por exemplo: `zbx-api pr
 
 Esses cenários usam a imagem `lab-zabbix` (maior que a base) e precisam de cerca de 1,5 GB de RAM livres.
 
+### Kubernetes de verdade nos labs
+
+Os cenários da trilha avançada rodam um **Kubernetes de nó único (k3s) dentro do lab**, com a Loja Exemplo publicada num Deployment, um Service e o nginx do servidor na frente. O `kubectl` já vem configurado no namespace `loja` (atalho `k`, com autocompletar), e uma registry interna (`registry.loja.local:5000`) responde à listagem de tags como uma registry de verdade.
+
+Tudo funciona sem internet: as imagens do cluster já vêm dentro da imagem `lab-k3s`. Cada lab precisa de cerca de 1 GB de RAM livre (o limite é 2 GB) e leva uns 30 segundos a mais para subir, o tempo do cluster ficar pronto.
+
 ### Postmortem guiado
 
 Depois de resolver, o botão **Escrever postmortem** abre um documento já com a **linha do tempo do seu plantão**: quando o alerta abriu, cada verificação, cada dica e a resolução. Você completa as seções de um postmortem sem culpados:
@@ -174,11 +180,15 @@ iz stop         # destrói o lab
 | 014 | Monitoramento cego: host sem dados no Zabbix | `zabbix_get`, `Server=`/`ServerActive=`, log do agente, falha silenciosa | ✅ |
 | 015 | Memória crescendo sem parar após deploy | gráficos do Zabbix, RSS, vazamento, `MemoryMax`, registrar o incidente no Zabbix | ✅ |
 
-### Próximas trilhas
+### Trilha avançada: Kubernetes e incidentes em cascata
 
-| Trilha | Foco | Status |
-|---|---|---|
-| Avançada | **Kubernetes** (k3s) e incidentes em cascata | 🚧 |
+| ID | Incidente | O que você pratica | Status |
+|---|---|---|---|
+| 016 | Loja fora do ar: pods em CrashLoopBackOff | `kubectl logs --previous`, `describe`, ConfigMap, `rollout restart` | ✅ |
+| 017 | Deploy travado em ImagePullBackOff | rolling update, ReplicaSets, eventos do pod, tags na registry | ✅ |
+| 018 | Pods rodando, loja fora do ar: Service sem endpoints | readiness probe, Service e EndpointSlices, `kubectl exec` | ✅ |
+| 019 | Pod preso em Pending | requests e limits, `describe node`, agendamento | 🚧 |
+| 020 | Incidente em cascata | várias falhas encadeadas, priorização | 🚧 |
 
 ## Roadmap
 
@@ -188,7 +198,7 @@ iz stop         # destrói o lab
 - [x] Interface web com terminal no navegador e monitoramento ao vivo
 - [x] Pontuação, MTTR pessoal e histórico de plantões
 - [x] Trilha intermediária: rede, web, banco e **Zabbix**
-- [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
+- [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata (016–018 prontos)
 - [x] Postmortem guiado, com a linha do tempo do seu plantão
 - [x] Binários prontos para download, instalador e CI
 - [x] Demo online com HTTPS e senha, e limpeza automática de labs
@@ -204,7 +214,7 @@ Navegador ── HTTP / WebSocket ──▶ iz ui (Go, interface embutida)
                                    └─ Docker ──▶ lab (Ubuntu + systemd, isolado com Sysbox)
 ```
 
-- **Labs:** containers Ubuntu com systemd, cron, SSH e MariaDB (desligado por padrão). No Linux, usa o runtime [Sysbox](https://github.com/nestybox/sysbox) para isolamento forte sem `--privileged`. Sem Sysbox, roda no modo local. Cada lab tem limite de CPU, memória e processos, e os incidentes de disco usam partições `tmpfs` próprias: nunca enchem o seu disco.
+- **Labs:** containers Ubuntu com systemd, cron, SSH e MariaDB (desligado por padrão), mais as variantes com Zabbix (`lab-zabbix`) e Kubernetes (`lab-k3s`). No Linux, usa o runtime [Sysbox](https://github.com/nestybox/sysbox) para isolamento forte sem `--privileged`. Sem Sysbox, roda no modo local. Cada lab tem limite de CPU, memória e processos, e os incidentes de disco usam partições `tmpfs` próprias: nunca enchem o seu disco.
 - **Backend:** Go, um binário só, com a interface embutida (`go:embed`). O terminal usa WebSocket e PTY, e só aceita conexões da mesma origem.
 - **Interface:** Svelte 5 + Vite, xterm.js para o terminal e fontes locais, sem chamadas externas.
 - **Cenários:** cada um é uma pasta com `scenario.yaml`, conteúdo em Markdown e scripts `setup`, `inject` e `check`. Adicionar um cenário não exige mexer em código.
@@ -227,7 +237,7 @@ scenarios/iniciante/001-disco-cheio/
 
 ## Publicando uma versão
 
-Uma tag `v*` dispara o workflow de release, que roda os testes, compila os binários para Linux e macOS (amd64 e arm64), publica a release com os checksums e envia as imagens dos labs (`lab-base` e `lab-zabbix`) para o GHCR. Antes de criar a tag, atualize o `main` local (`git pull`) e confira o commit com `git log --oneline -1`:
+Uma tag `v*` dispara o workflow de release, que roda os testes, compila os binários para Linux e macOS (amd64 e arm64), publica a release com os checksums e envia as imagens dos labs (`lab-base`, `lab-zabbix` e `lab-k3s`) para o GHCR. Antes de criar a tag, atualize o `main` local (`git pull`) e confira o commit com `git log --oneline -1`:
 
 ```bash
 git tag v0.1.0

@@ -1,0 +1,63 @@
+apiVersion: incidente-zero/v1
+
+id: 018-service-sem-endpoints
+title: "Pods rodando, loja fora do ar: Service sem endpoints"
+level: avancado
+track: kubernetes
+estimated_minutes: 25
+tags: [kubernetes, kubectl, readiness probe, service, endpoints, 502]
+
+learning_objectives:
+  - Diferenciar um pod Running de um pod pronto (READY)
+  - Entender como o Service escolhe para quais pods mandar tráfego
+  - Ver os endpoints de um Service (kubectl get endpointslices)
+  - Ler falhas de readiness probe nos eventos do pod
+  - Corrigir a probe sem remover a proteção que ela dá
+
+image: ghcr.io/sheila724/incidente-zero/lab-k3s:latest
+hostname: loja-k8s-01
+user: aluno
+requires: []
+resources:
+  cpus: 2
+  memory: 2g
+  pids: 4096
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Loja Exemplo fora do ar (HTTP 502), pods em Running"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Confirme o sintoma
+    text: "Rode `curl -I http://localhost/` e `kubectl get pods`. Os pods estão `Running`. Olhe com atenção a coluna **READY**."
+  - title: Para onde o Service manda o tráfego?
+    text: "Rode `kubectl get endpointslices -l kubernetes.io/service-name=loja-web` (ou `kubectl describe svc loja-web`). Quantos endereços de pod o Service tem?"
+  - title: Por que os pods não estão prontos?
+    text: "Use `kubectl describe pod <pod>` e leia os **Events**. O que a readiness probe está chamando, e o que recebe de volta?"
+  - title: Teste de dentro do cluster
+    text: "Descubra o que a aplicação responde: `kubectl exec <pod> -- wget -qO- http://localhost:8080/health` e o mesmo para o caminho que a probe usa."
+  - title: Corrija a probe
+    text: "Ajuste a readiness probe do Deployment para um caminho que a aplicação realmente atende. Não remova a probe."
+    verify: "[ \"$(kubectl -n loja get deploy loja-web -o jsonpath='{.status.readyReplicas}')\" -ge 2 ] 2>/dev/null"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15
