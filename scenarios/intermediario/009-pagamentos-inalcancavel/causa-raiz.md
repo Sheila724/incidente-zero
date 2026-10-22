@@ -36,6 +36,16 @@
 | Teste sintético do checkout completo no monitoramento | Detecção |
 | Checklist de migração com os consumidores da API | Processo |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| Log da aplicação tentando `10.20.0.9`, `getent` respondendo `10.20.0.9` e `dig` respondendo `10.20.0.15` | Evidência |
+| A linha esquecida no `/etc/hosts` | Evidência da causa |
+| O checkout voltar depois do `restart` da aplicação | Parcial: só funciona porque o `/etc/hosts` já foi corrigido; sozinho, o restart resolve para o IP errado de novo |
+
 ## Para o seu postmortem
 
 Os dois times tinham razão do seu ponto de vista: o DNS estava certo, e a loja não tinha mudado nada. O incidente mora **entre** os dois. Por isso vale testar dependências do ponto de vista de quem consome, não só de quem fornece.

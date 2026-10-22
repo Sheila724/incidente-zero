@@ -28,6 +28,18 @@ else
   fail "No Zabbix, o agente de loja-web-01 ainda aparece indisponível"
 fi
 
+# Coleta funcional: trigger em OK não basta, os itens precisam voltar a receber valores
+hostid0=$(echo "$host" | jq -r '.[0].hostid // empty')
+agora=$(date +%s)
+recentes=$(zbx-api item.get "{\"hostids\":\"$hostid0\",\"output\":[\"key_\",\"lastclock\"]}" 2>/dev/null \
+  | jq --argjson agora "$agora" '[.[] | select((.lastclock | tonumber) > ($agora - 60))] | length')
+total_itens=$(zbx-api item.get "{\"hostids\":\"$hostid0\",\"countOutput\":true}" 2>/dev/null | jq -r '.')
+if [ -n "$total_itens" ] && [ "${recentes:-0}" -ge "$total_itens" ] && [ "$total_itens" -gt 0 ]; then
+  pass "Coleta normalizada: os $total_itens itens do host receberam dados no último minuto"
+else
+  fail "Coleta incompleta: ${recentes:-0} de ${total_itens:-?} itens com dados no último minuto (confira em Dados recentes)"
+fi
+
 uso=$(df --output=pcent /var/log | tail -1 | tr -dc '0-9')
 if [ "${uso:-100}" -le 90 ]; then
   pass "/var/log com ${uso}% de uso"

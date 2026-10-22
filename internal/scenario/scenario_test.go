@@ -70,6 +70,7 @@ func TestCenariosDoRepositorio(t *testing.T) {
 				"scripts.setup":      s.Scripts.Setup,
 				"scripts.inject":     s.Scripts.Inject,
 				"scripts.check":      s.Scripts.Check,
+				"scripts.solve":      s.Scripts.Solve,
 			}
 			for field, rel := range files {
 				if rel == "" {

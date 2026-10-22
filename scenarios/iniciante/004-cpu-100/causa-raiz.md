@@ -32,6 +32,16 @@
 | Alerta de CPU por processo, não só do servidor | Detecção |
 | Revisão de mudanças de configuração como se fossem código | Processo |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `top` e `ps` apontando o `report-worker` com 100% de CPU | Evidência |
+| `INTERVAL_SECONDS=0` no arquivo de configuração e o worker gerando relatórios sem pausa | Evidência da causa |
+| A CPU cair depois do `kill` | Coincidência: o `Restart=always` traz o processo de volta |
+
 ## Para o seu postmortem
 
 Repare na diferença entre **mitigar** (matar o processo, que alivia por segundos), **corrigir** (ajustar a configuração) e **prevenir** (validação e limite de CPU). Um bom postmortem registra os três.

@@ -34,6 +34,16 @@
 | Perfis do Ansible com validação (o IP do servidor precisa existir) | Prevenção |
 | Exports em partição ou armazenamento próprios | Prevenção |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `zabbix_get` falhando e o log do agente com `connection from "127.0.0.1" rejected, allowed hosts: "10.20.0.50"` | Evidência |
+| Os itens voltarem a receber valores depois de corrigir o `Server=` | Evidência da correção (não só o trigger em OK) |
+| O trigger do agente voltar para OK | Insuficiente: prova que o `agent.ping` chegou, não que toda a coleta voltou |
+
 ## Para o seu postmortem
 
 Um monitoramento que não alerta sobre a própria cegueira dá uma falsa sensação de segurança. Quando um host fica sem dados, a pergunta certa não é só "por que o agente parou?", mas também **"o que aconteceu enquanto não estávamos olhando?"**

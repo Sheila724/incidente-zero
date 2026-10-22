@@ -57,6 +57,7 @@ type Scripts struct {
 	Setup  string `yaml:"setup"`
 	Inject string `yaml:"inject"`
 	Check  string `yaml:"check"`
+	Solve  string `yaml:"solve"` // solução de referência, usada pelo `iz selftest`
 }
 
 // App é uma interface web que roda dentro do lab (ex.: o frontend do Zabbix).

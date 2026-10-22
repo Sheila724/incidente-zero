@@ -34,6 +34,16 @@
 | Servidores de teste nunca em produção, nunca como root, nunca habilitados | Processo |
 | Tratar a exposição como incidente de segurança: revisar acessos e rotacionar segredos | Segurança |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `journalctl -u nginx` com `bind() to 0.0.0.0:80 failed (98: Address already in use)` | Evidência |
+| `ss -ltnp` mostrando o `debug-http` dono da porta 80 | Evidência |
+| O nginx subir depois de matar o processo | Coincidência: o serviço habilitado volta no próximo boot |
+
 ## Para o seu postmortem
 
 Este incidente tem duas faces: **disponibilidade** (a loja fora do ar) e **segurança** (dados expostos). Um bom postmortem trata as duas, e a segunda costuma exigir ações que vão além do servidor.

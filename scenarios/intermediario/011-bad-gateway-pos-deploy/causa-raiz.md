@@ -36,6 +36,16 @@
 | Mudanças de porta compatíveis: aplicação escuta nas duas até o proxy migrar | Prevenção |
 | Não fazer deploy em cima do horário de campanha | Processo |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `error.log` com `connect() failed (111: Connection refused)` para `127.0.0.1:8080` e `ss -ltnp` com a aplicação na 8081 | Evidência |
+| O changelog da 2.4.0 anunciando a troca de porta | Evidência da causa |
+| A home voltar depois de corrigir o `upstream` | Parcial: a `/api/` continua apontando para a porta antiga |
+
 ## Para o seu postmortem
 
 "O serviço está ativo" não é o mesmo que "o usuário consegue usar". Toda verificação de deploy deveria passar pelo mesmo caminho que o cliente percorre.

@@ -33,6 +33,16 @@
 | Teste pós-deploy (smoke test) com `curl` em cada site | Detecção |
 | Congelar deploys perto de eventos críticos | Processo |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `nginx -t` apontando o arquivo `promo` e a linha do erro | Evidência |
+| O horário da falha bater com o deploy da landing page | Indício: aponta para onde olhar, mas sozinho não prova nada |
+| O site voltar depois de remover o `promo` | Coincidência: tira o sintoma, mas a promoção continua fora do ar |
+
 ## Para o seu postmortem
 
 O erro de digitação é o gatilho, não a causa. Qualquer pessoa esquece um `;`. A pergunta útil é: **por que o processo deixou um erro de digitação derrubar a loja inteira?**

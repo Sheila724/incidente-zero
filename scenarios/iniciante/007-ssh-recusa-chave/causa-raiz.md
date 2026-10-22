@@ -32,6 +32,16 @@
 | Alerta de arquivos graváveis por todos em `/home` e `/etc` | Detecção |
 | Runbook do erro `Permission denied (publickey)`: começar pelo log do servidor | Resposta |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| Log do `sshd` com `Authentication refused: bad ownership or modes` | Evidência |
+| `namei -l` mostrando a home ou a `~/.ssh` gravável por outros | Evidência |
+| O login funcionar com `StrictModes no` | Coincidência perigosa: entra, mas desliga a proteção para todos |
+
 ## Para o seu postmortem
 
 Quando duas mudanças acontecem perto do incidente, resista a culpar a mais óbvia. Aqui a rotação da chave era inocente quanto ao conteúdo, mas culpada quanto ao **dono** do arquivo. O log do servidor separa as hipóteses em segundos.

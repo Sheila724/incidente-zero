@@ -40,6 +40,11 @@ RUN mkdir -p /etc/systemd/journald.conf.d \
 # /var/log pode ser um tmpfs vazio: recria o diretório do nginx no boot
 RUN printf 'd /var/log/nginx 0755 www-data adm -\n' > /etc/tmpfiles.d/lab-nginx.conf
 
+# Em containers, o kernel pode recusar a gravação do loginuid, e o cron
+# deixaria de executar os jobs ("Cannot make/remove an entry for the
+# specified session"). O módulo fica opcional para o cron.
+RUN sed -i 's/^session\s\+required\s\+pam_loginuid.so/session    optional     pam_loginuid.so/' /etc/pam.d/cron
+
 # Usuário do aluno, com sudo
 RUN useradd -m -s /bin/bash aluno \
  && echo 'aluno ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/aluno \

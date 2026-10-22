@@ -331,7 +331,7 @@
         >
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           {app.title}
-          {#if app.login}<span class="mono faint small">{app.login} / {app.password}</span>{/if}
+          {#if app.login}<span class="mono faint small creds">{app.login} / {app.password}</span>{/if}
         </a>
       {/each}
       <button type="button" class="btn" onclick={() => (tab = 'dicas')}>
@@ -622,4 +622,5 @@
     .pre { padding: 16px 16px 40px; }
     .pre-side { position: static; }
   }
+  @media (max-width: 1500px) { .creds { display: none; } }
 </style>

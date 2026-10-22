@@ -34,6 +34,16 @@
 | Relatórios pesados numa réplica de leitura, não no banco da loja | Prevenção |
 | `wait_timeout` menor para usuários de batch | Prevenção |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `SHOW PROCESSLIST` com todas as conexões do usuário `relatorio` em `Sleep` | Evidência |
+| O script do relatório abrindo uma conexão por categoria e dormindo sem fechar | Evidência da causa |
+| A loja voltar depois do `restart` do MariaDB | Coincidência: o cron enche o banco de novo em poucos minutos |
+
 ## Para o seu postmortem
 
 O relatório não "derrubou o banco": ele usou um recurso compartilhado sem limite, e a loja ficou sem a sua parte. Sempre que dois sistemas dividem algo finito (conexões, disco, CPU), pergunte: **o que impede um deles de pegar tudo?**
