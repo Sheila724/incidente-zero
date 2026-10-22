@@ -71,6 +71,17 @@ No terminal do lab, `zbx-api` consulta a API do Zabbix, por exemplo: `zbx-api pr
 
 Esses cenários usam a imagem `lab-zabbix` (maior que a base) e precisam de cerca de 1,5 GB de RAM livres.
 
+### Postmortem guiado
+
+Depois de resolver, o botão **Escrever postmortem** abre um documento já com a **linha do tempo do seu plantão**: quando o alerta abriu, cada verificação, cada dica e a resolução. Você completa as seções de um postmortem sem culpados:
+
+- resumo e causa raiz;
+- **evidência que confirmou a causa**;
+- **o que só coincidiu com a recuperação** (um restart, um deploy próximo);
+- ações de prevenção, uma por linha (viram uma checklist).
+
+O resultado sai em Markdown, para baixar ou copiar para um wiki ou ticket, e dá para comparar com o postmortem de referência do cenário. Pelo terminal, `iz postmortem <cenário>` mostra o documento.
+
 ### Pontuação
 
 | Regra | Pontos |
@@ -132,6 +143,7 @@ iz stop         # destrói o lab
 | `iz hint [n]` | Mostra a dica n |
 | `iz concepts` | Conceitos para estudar antes |
 | `iz solution` | Solução comentada, causa raiz e referências |
+| `iz postmortem` | Mostra o seu postmortem em Markdown |
 | `iz stop` | Destrói o lab |
 | `iz selftest [cenários]` | Testa os cenários de ponta a ponta (para quem cria cenários) |
 
@@ -177,7 +189,7 @@ iz stop         # destrói o lab
 - [x] Pontuação, MTTR pessoal e histórico de plantões
 - [x] Trilha intermediária: rede, web, banco e **Zabbix**
 - [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
-- [ ] Postmortem guiado, gerado a partir do que você fez no lab
+- [x] Postmortem guiado, com a linha do tempo do seu plantão
 - [x] Binários prontos para download, instalador e CI
 - [x] Demo online com HTTPS e senha, e limpeza automática de labs
 - [ ] Variações nos cenários (nomes, portas e serviços diferentes a cada execução)

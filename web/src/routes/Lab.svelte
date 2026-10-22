@@ -365,7 +365,8 @@
           </div>
           {#if result.solutionViewed}<p class="faint small">A solução foi aberta antes da correção, então esta tentativa não pontua.</p>{/if}
           <div class="result-actions">
-            <button type="button" class="btn btn-primary" onclick={() => loadSolution(true)}>Ver solução e causa raiz</button>
+            <a class="btn btn-primary" href={`#/postmortem/${id}`}>Escrever postmortem</a>
+            <button type="button" class="btn" onclick={() => loadSolution(true)}>Ver solução e causa raiz</button>
             {#if nextId}
               <a class="btn" href={`#/lab/${nextId}`}>Próximo incidente</a>
             {:else}

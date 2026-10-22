@@ -4,6 +4,7 @@ package progress
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,6 +28,33 @@ type Record struct {
 	BestSeconds    int        `json:"bestSeconds"`
 	BestPoints     int        `json:"bestPoints"`
 	Attempts       int        `json:"attempts"`
+
+	// Postmortem
+	Timeline     []Event     `json:"timeline,omitempty"`     // eventos da tentativa atual
+	LastTimeline []Event     `json:"lastTimeline,omitempty"` // eventos da última resolução
+	Postmortem   *Postmortem `json:"postmortem,omitempty"`
+}
+
+// Event é um momento do plantão, usado na linha do tempo do postmortem.
+type Event struct {
+	At     time.Time `json:"at"`
+	Kind   string    `json:"kind"` // start | hint | check | solution | resolved
+	Detail string    `json:"detail,omitempty"`
+}
+
+// Postmortem é o que o aluno escreveu sobre o incidente.
+type Postmortem struct {
+	Resumo       string    `json:"resumo"`
+	Causa        string    `json:"causa"`
+	Evidencia    string    `json:"evidencia"`
+	Coincidencia string    `json:"coincidencia"`
+	Acoes        string    `json:"acoes"`
+	SavedAt      time.Time `json:"savedAt"`
+}
+
+// Vazio informa se nada foi escrito.
+func (p *Postmortem) Vazio() bool {
+	return p == nil || (p.Resumo == "" && p.Causa == "" && p.Evidencia == "" && p.Coincidencia == "" && p.Acoes == "")
 }
 
 type Store struct {
@@ -118,6 +146,7 @@ func (s *Store) Start(id string) error {
 	r.StartedAt = &now
 	r.HintsUsed, r.HintCost, r.SolutionViewed = 0, 0, false
 	r.Attempts++
+	r.Timeline = []Event{{At: now, Kind: "start"}}
 	return s.save()
 }
 
@@ -129,6 +158,7 @@ func (s *Store) UseHint(id string, n, cost int) error {
 	if n > r.HintsUsed {
 		r.HintsUsed = n
 		r.HintCost += cost
+		r.log("hint", fmt.Sprintf("Dica %d revelada (−%d pontos)", n, cost))
 	}
 	return s.save()
 }
@@ -136,7 +166,11 @@ func (s *Store) UseHint(id string, n, cost int) error {
 func (s *Store) ViewSolution(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.rec(id).SolutionViewed = true
+	r := s.rec(id)
+	if !r.SolutionViewed {
+		r.log("solution", "Solução comentada aberta")
+	}
+	r.SolutionViewed = true
 	return s.save()
 }
 
@@ -175,7 +209,42 @@ func (s *Store) Resolve(id string, base, bonusMinutes int) (Record, error) {
 	if points > r.BestPoints {
 		r.BestPoints = points
 	}
+	if r.StartedAt != nil {
+		r.log("resolved", "Verificação aprovada: incidente resolvido")
+		r.LastTimeline = r.Timeline
+		r.Timeline = nil
+	}
 	r.StartedAt = nil
+	return *r, s.save()
+}
+
+// log registra um evento na tentativa em andamento.
+func (r *Record) log(kind, detail string) {
+	if r.StartedAt == nil {
+		return
+	}
+	r.Timeline = append(r.Timeline, Event{At: time.Now(), Kind: kind, Detail: detail})
+}
+
+// Log registra um evento na tentativa em andamento (ex.: uma verificação).
+func (s *Store) Log(id, kind, detail string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r := s.rec(id)
+	if r.StartedAt == nil {
+		return nil
+	}
+	r.log(kind, detail)
+	return s.save()
+}
+
+// SavePostmortem guarda o postmortem do aluno para o cenário.
+func (s *Store) SavePostmortem(id string, pm Postmortem) (Record, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r := s.rec(id)
+	pm.SavedAt = time.Now()
+	r.Postmortem = &pm
 	return *r, s.save()
 }
 
@@ -186,6 +255,7 @@ type HistoryEntry struct {
 	Seconds    int       `json:"seconds"`
 	Hints      int       `json:"hints"`
 	Points     int       `json:"points"`
+	Postmortem bool      `json:"postmortem"` // há postmortem escrito
 }
 
 // History lista os cenários resolvidos, do mais recente para o mais antigo.
@@ -196,7 +266,8 @@ func (s *Store) History() []HistoryEntry {
 	for id, r := range s.data {
 		if r.Resolved && r.LastResolvedAt != nil {
 			out = append(out, HistoryEntry{ID: id, ResolvedAt: *r.LastResolvedAt,
-				Seconds: r.LastSeconds, Hints: r.LastHints, Points: r.BestPoints})
+				Seconds: r.LastSeconds, Hints: r.LastHints, Points: r.BestPoints,
+				Postmortem: !r.Postmortem.Vazio()})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ResolvedAt.After(out[j].ResolvedAt) })

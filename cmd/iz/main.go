@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"text/tabwriter"
+	"time"
+	_ "time/tzdata" // fusos horários do postmortem, mesmo sem tzdata no sistema
 
 	incidentezero "github.com/Sheila724/incidente-zero"
 
@@ -40,6 +42,7 @@ Uso:
   iz hint  [cenário] [n]   mostra a dica n (1, 2, 3...)
   iz concepts [cenário]    mostra os conceitos para estudar
   iz solution [cenário]    mostra a solução comentada e a causa raiz
+  iz postmortem [cenário]  mostra o seu postmortem em Markdown (escreva na interface)
   iz stop  [cenário]       destrói o lab
   iz selftest [cenários]   testa os cenários de ponta a ponta (para quem cria cenários)
   iz version               mostra a versão
@@ -157,6 +160,21 @@ func run(args []string) error {
 		return cmdDoctor()
 	case "selftest":
 		return cmdSelftest(rest)
+	case "postmortem":
+		s, err := resolve(rest)
+		if err != nil {
+			return err
+		}
+		store, err := progress.Open(progress.DefaultPath())
+		if err != nil {
+			return err
+		}
+		rec := store.Get(s.ID)
+		if !rec.Resolved {
+			return fmt.Errorf("resolva o incidente %s antes de escrever o postmortem", s.ID)
+		}
+		fmt.Print(web.PostmortemMarkdown(s, rec, time.Local))
+		return nil
 	case "start":
 		if len(rest) < 1 {
 			return fmt.Errorf("informe o cenário: iz start 001")
