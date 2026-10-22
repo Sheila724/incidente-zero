@@ -2,6 +2,7 @@ package progress
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -70,5 +71,43 @@ func TestPersistencia(t *testing.T) {
 	}
 	if len(s2.History()) != 1 {
 		t.Error("o histórico deveria ter uma entrada")
+	}
+}
+
+func TestLinhaDoTempo(t *testing.T) {
+	s := open(t)
+	_ = s.Log("x", "check", "antes de começar: ignorado")
+	_ = s.Start("x")
+	_ = s.UseHint("x", 1, 10)
+	_ = s.UseHint("x", 1, 10) // repetida: não entra de novo
+	_ = s.Log("x", "check", "Verificação: 2 de 5 itens ok")
+	r, _ := s.Resolve("x", 100, 0)
+
+	var tipos []string
+	for _, e := range r.LastTimeline {
+		tipos = append(tipos, e.Kind)
+	}
+	if got, want := strings.Join(tipos, ","), "start,hint,check,resolved"; got != want {
+		t.Errorf("linha do tempo = %s, esperava %s", got, want)
+	}
+	if len(r.Timeline) != 0 {
+		t.Error("a tentativa atual deveria estar vazia depois de resolver")
+	}
+
+	// Verificar de novo, já resolvido, não apaga a linha do tempo
+	r, _ = s.Resolve("x", 100, 0)
+	if len(r.LastTimeline) != 4 {
+		t.Errorf("a linha do tempo foi perdida: %d eventos", len(r.LastTimeline))
+	}
+
+	if !r.Postmortem.Vazio() {
+		t.Error("postmortem deveria começar vazio")
+	}
+	r, _ = s.SavePostmortem("x", Postmortem{Causa: "binlog sem expiração"})
+	if r.Postmortem.Vazio() || r.Postmortem.SavedAt.IsZero() {
+		t.Error("postmortem não foi salvo")
+	}
+	if h := s.History(); len(h) != 1 || !h[0].Postmortem {
+		t.Error("o histórico deveria marcar o postmortem escrito")
 	}
 }

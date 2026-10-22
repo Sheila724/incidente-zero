@@ -4,6 +4,7 @@ package web
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -45,6 +46,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/scenarios/{id}/hints/{n}", s.hint)
 	mux.HandleFunc("GET /api/scenarios/{id}/solution", s.solution)
 	mux.HandleFunc("GET /api/scenarios/{id}/terminal", s.terminal)
+	mux.HandleFunc("GET /api/scenarios/{id}/postmortem", s.postmortemGet)
+	mux.HandleFunc("PUT /api/scenarios/{id}/postmortem", s.postmortemSave)
+	mux.HandleFunc("GET /api/scenarios/{id}/postmortem.md", s.postmortemMarkdown)
 	mux.HandleFunc("/apps/{id}/{app}/", s.appProxy)
 	mux.HandleFunc("/apps/{id}/{app}", s.appProxy)
 	mux.Handle("/", s.spa())
@@ -376,7 +380,17 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := map[string]any{"passed": code == 0, "items": parseCheck(out), "output": out, "at": time.Now().UnixMilli()}
+	items := parseCheck(out)
+	resp := map[string]any{"passed": code == 0, "items": items, "output": out, "at": time.Now().UnixMilli()}
+	if code != 0 {
+		ok := 0
+		for _, it := range items {
+			if it.OK {
+				ok++
+			}
+		}
+		_ = s.Store.Log(sc.ID, "check", fmt.Sprintf("Verificação: %d de %d itens ok", ok, len(items)))
+	}
 	if code == 0 {
 		before := s.Store.Get(sc.ID)
 		if before.StartedAt != nil || !before.Resolved {

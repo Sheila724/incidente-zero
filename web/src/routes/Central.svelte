@@ -208,7 +208,7 @@
             <thead>
               <tr>
                 <th>Incidente</th><th>Severidade</th><th class="r">Tempo</th>
-                <th class="r">Dicas</th><th class="r">Pontos</th><th>Status</th>
+                <th class="r">Dicas</th><th class="r">Pontos</th><th>Status</th><th>Postmortem</th>
               </tr>
             </thead>
             <tbody>
@@ -221,6 +221,13 @@
                   <td class="r mono">{h.hints}</td>
                   <td class="r mono strong">{h.points}</td>
                   <td><span class="pill st-ok">RESOLVIDO</span></td>
+                  <td>
+                    {#if h.postmortem}
+                      <a class="pm-link" href={`#/postmortem/${h.id}`}>Ver postmortem</a>
+                    {:else}
+                      <a class="pm-link pend" href={`#/postmortem/${h.id}`}>Escrever</a>
+                    {/if}
+                  </td>
                 </tr>
               {/each}
             </tbody>
@@ -331,4 +338,7 @@
     main { padding: 24px 16px 40px; }
     .hero h1 { font-size: 28px; }
   }
+  .pm-link { font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; color: var(--accent); }
+  .pm-link:hover { text-decoration: underline; }
+  .pm-link.pend { color: var(--violet); }
 </style>
