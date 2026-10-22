@@ -1,0 +1,24 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Os pods da loja estão Running, mas não prontos: a readiness probe testa
+      o banco `loja-db`. Veja `kubectl get deploy`: quantas réplicas o banco
+      tem? Comece restaurando com `kubectl scale deploy/loja-db --replicas=1`.
+
+  - level: 2
+    cost: 20
+    text: >
+      Se o banco cai de novo sozinho, não é falha dele: alguém o está
+      desligando. Procure automações no cluster com `kubectl get cronjobs` e
+      leia o que o último job fez: `kubectl get jobs` e `kubectl logs job/<nome>`.
+
+  - level: 3
+    cost: 40
+    text: >
+      A CronJob `economia-homologacao` desliga a cada 2 minutos tudo que tem o
+      rótulo `ambiente=homologacao`. O manifesto novo do `loja-db` foi copiado de
+      homologação e veio com esse rótulo. Corrija com
+      `kubectl label deploy/loja-db ambiente=producao --overwrite`, suba o banco
+      com `kubectl scale deploy/loja-db --replicas=1` e mantenha a CronJob
+      funcionando.

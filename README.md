@@ -188,8 +188,8 @@ iz stop         # destrói o lab
 | 016 | Loja fora do ar: pods em CrashLoopBackOff | `kubectl logs --previous`, `describe`, ConfigMap, `rollout restart` | ✅ |
 | 017 | Deploy travado em ImagePullBackOff | rolling update, ReplicaSets, eventos do pod, tags na registry | ✅ |
 | 018 | Pods rodando, loja fora do ar: Service sem endpoints | readiness probe, Service e EndpointSlices, `kubectl exec` | ✅ |
-| 019 | Pod preso em Pending | requests e limits, `describe node`, agendamento | 🚧 |
-| 020 | Incidente em cascata | várias falhas encadeadas, priorização | 🚧 |
+| 019 | Checkout novo preso em Pending | scheduler, requests e limits, unidades de CPU, `describe node` | ✅ |
+| 020 | Madrugada: a loja cai, volta e cai de novo | falha em cascata, priorização, CronJobs e Jobs, labels e seletores | ✅ |
 
 ## Roadmap
 
@@ -199,7 +199,7 @@ iz stop         # destrói o lab
 - [x] Interface web com terminal no navegador e monitoramento ao vivo
 - [x] Pontuação, MTTR pessoal e histórico de plantões
 - [x] Trilha intermediária: rede, web, banco e **Zabbix**
-- [ ] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata (016–018 prontos)
+- [x] Trilha avançada: **Kubernetes** (k3s) e incidentes em cascata
 - [x] Postmortem guiado, com a linha do tempo do seu plantão
 - [x] Binários prontos para download, instalador e CI
 - [x] Demo online com HTTPS e senha, e limpeza automática de labs

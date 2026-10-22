@@ -1,0 +1,61 @@
+apiVersion: incidente-zero/v1
+
+id: 019-pod-pending
+title: "Checkout novo preso em Pending"
+level: avancado
+track: kubernetes
+estimated_minutes: 25
+tags: [kubernetes, kubectl, pending, scheduler, requests, limits, recursos]
+
+learning_objectives:
+  - Entender o que o estado Pending diz (o pod ainda não tem nó)
+  - Ler a decisão do scheduler nos eventos do pod
+  - Comparar o que o pod pede (requests) com o que o nó oferece (allocatable)
+  - Conhecer as unidades de CPU e memória do Kubernetes (m, Mi, Gi)
+  - Corrigir a reserva de recursos sem remover a proteção que ela dá
+
+image: ghcr.io/sheila724/incidente-zero/lab-k3s:latest
+hostname: loja-k8s-01
+user: aluno
+requires: []
+resources:
+  cpus: 2
+  memory: 2g
+  pids: 4096
+  mounts: []
+
+alert:
+  severity: alta
+  source: monitoramento
+  title: "Checkout novo fora do ar (HTTP 502) após o primeiro deploy"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Veja os pods do checkout
+    text: "Rode `kubectl get pods`. Em que estado estão os pods da `loja-checkout`? Repare nas colunas READY, STATUS e RESTARTS."
+  - title: Pergunte ao scheduler
+    text: "Use `kubectl describe pod <pod do checkout>` e leia os **Events**. Quem escreveu a mensagem e o que ela diz sobre o nó?"
+  - title: Compare pedido e oferta
+    text: "Veja quanto o pod pede em `kubectl get deploy loja-checkout -o yaml` (procure `resources`) e quanto o nó oferece em `kubectl describe node loja-k8s-01` (seções **Allocatable** e **Allocated resources**)."
+  - title: Corrija a reserva
+    text: "Ajuste o pedido de CPU para um valor que faça sentido (consulte `/opt/loja/checkout/README.md`). Não remova os requests e não tire a loja principal do ar para abrir espaço."
+    verify: "[ \"$(kubectl -n loja get deploy loja-checkout -o jsonpath='{.status.readyReplicas}')\" -ge 2 ] 2>/dev/null"
+
+scoring:
+  base: 100
+  time_bonus_minutes: 15

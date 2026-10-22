@@ -1,0 +1,23 @@
+hints:
+  - level: 1
+    cost: 10
+    text: >
+      Pending quer dizer que o pod foi aceito, mas o scheduler ainda não achou
+      um nó para ele. Nada rodou, então não há logs. A explicação está nos
+      eventos: `kubectl describe pod <pod>`, no final da saída.
+
+  - level: 2
+    cost: 20
+    text: >
+      "Insufficient cpu" significa que o nó não tem CPU livre para o que o pod
+      reserva (`requests`). Compare o `resources.requests.cpu` do Deployment com
+      o `Allocatable` de `kubectl describe node loja-k8s-01`. Atenção à unidade:
+      em CPU, `1` é um núcleo inteiro e `500m` é meio núcleo.
+
+  - level: 3
+    cost: 40
+    text: >
+      O manifesto pede `cpu: "250"` (250 núcleos!), quando o time queria
+      `250m`. Corrija com
+      `kubectl set resources deploy/loja-checkout --requests=cpu=250m` e
+      acompanhe com `kubectl rollout status deploy/loja-checkout`.

@@ -1,0 +1,65 @@
+apiVersion: incidente-zero/v1
+
+id: 020-cascata-madrugada
+title: "Madrugada: a loja cai, volta e cai de novo"
+level: avancado
+track: kubernetes
+estimated_minutes: 35
+tags: [kubernetes, kubectl, cascata, dependências, cronjob, labels, readiness probe, priorização]
+
+learning_objectives:
+  - Seguir uma falha em cascata do sintoma até a origem (nginx → Service → pods → banco)
+  - "Priorizar: primeiro restaurar o serviço, depois achar a causa"
+  - Desconfiar quando o incidente volta sozinho e procurar quem age no cluster
+  - Ler CronJobs, Jobs e seus logs
+  - Entender como labels e seletores decidem quem é afetado por uma automação
+
+image: ghcr.io/sheila724/incidente-zero/lab-k3s:latest
+hostname: loja-k8s-01
+user: aluno
+requires: []
+resources:
+  cpus: 2
+  memory: 2g
+  pids: 4096
+  mounts: []
+
+alert:
+  severity: critica
+  source: monitoramento
+  title: "Loja Exemplo fora do ar (HTTP 502) às 02:10"
+  briefing: briefing.md
+
+content:
+  concepts: conceitos.md
+  hints: hints.yaml
+  solution: solucao.md
+  root_cause: causa-raiz.md
+  references: referencias.md
+
+scripts:
+  setup: scripts/setup.sh
+  inject: scripts/inject.sh
+  check: scripts/check.sh
+  solve: scripts/solve.sh     # solução de referência (iz selftest)
+
+modes: [guiado, plantao]
+
+guided:
+  - title: Siga o caminho do pedido
+    text: "Rode `curl -I http://localhost/`, `kubectl get pods` e `kubectl describe svc loja-web | grep Endpoints`. Onde o caminho nginx → Service → pods para?"
+  - title: Por que a loja não está pronta?
+    text: "Use `kubectl describe pod <pod da loja-web>` e leia os eventos da readiness probe. Do que a loja depende?"
+  - title: Restaure primeiro
+    text: "Olhe `kubectl get deploy`. Coloque a dependência de volta no ar e confirme que a loja voltou. Restaurar vem antes de investigar."
+    verify: "[ \"$(kubectl -n loja get deploy loja-db -o jsonpath='{.status.readyReplicas}')\" -ge 1 ] 2>/dev/null"
+  - title: Espere e observe
+    text: "Acompanhe `kubectl get deploy loja-db -w` por 2 minutos. Se cair de novo, alguém está mexendo no cluster: veja `kubectl get events --sort-by=.lastTimestamp`, `kubectl get cronjobs` e `kubectl get jobs`."
+  - title: Ache a origem
+    text: "Leia os logs do último job (`kubectl logs job/<nome>`) e compare com os rótulos dos Deployments: `kubectl get deploy --show-labels`. Por que o banco está na lista?"
+  - title: Corrija a causa
+    text: "Corrija o que faz a automação pegar o banco, sem desligar a automação, e garanta que a loja continue de pé."
+
+scoring:
+  base: 100
+  time_bonus_minutes: 20
