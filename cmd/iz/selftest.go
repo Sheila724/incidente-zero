@@ -138,12 +138,13 @@ func anotarFalha(s *scenario.Scenario, err error) {
 	if os.Getenv("GITHUB_ACTIONS") != "true" {
 		return
 	}
+	// Diagnóstico sem o ruído do kernel do host (o journal do lab também recebe essas linhas)
 	diag, _, _ := lab.Exec(s, "systemctl --failed --no-legend --plain 2>&1 | head -10\n"+
-		"echo '--- avisos'; journalctl -p warning -n 15 --no-pager 2>&1 | cut -c1-200\n"+
-		"echo '--- journal'; journalctl -n 25 --no-pager 2>&1 | cut -c1-200\n", 20*time.Second)
+		"echo '--- journal'; journalctl -n 300 --no-pager -o short 2>&1 | "+
+		"grep -vE ' kernel: |fstab-generator|Reloading|EXTRA_OPTS' | tail -40 | cut -c1-180\n", 20*time.Second)
 	texto := fmt.Sprintf("%v\n\n%s\n%s", err, strings.TrimSpace(ultimaSaida), diag)
-	if len(texto) > 3500 {
-		texto = texto[:3500]
+	if len(texto) > 6000 {
+		texto = texto[:6000]
 	}
 	esc := strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A").Replace(texto)
 	fmt.Printf("::error title=Selftest %s::%s\n", s.ID, esc)
