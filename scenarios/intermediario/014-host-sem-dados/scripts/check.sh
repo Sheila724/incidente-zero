@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 if [ "$(zabbix_get -s 127.0.0.1 -k agent.ping 2>/dev/null)" = "1" ]; then
   pass "O agente responde ao Zabbix Server (zabbix_get agent.ping = 1)"
@@ -13,7 +14,7 @@ fi
 
 server=$(grep -E '^Server=' /etc/zabbix/zabbix_agent2.conf | tail -1 | cut -d= -f2)
 if echo "$server" | grep -Eq '(^|,)0\.0\.0\.0(/0)?(,|$)|(^|,)::/0(,|$)'; then
-  fail "Server=$server libera o agente para qualquer endereço: use o IP do Zabbix Server"
+  contorno "Server=$server libera o agente para qualquer endereço: use o IP do Zabbix Server"
 elif echo "$server" | grep -Eq '(^|,)(127\.0\.0\.1|localhost)(,|$)'; then
   pass "Server= aponta para o Zabbix Server ($server)"
 else

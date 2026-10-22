@@ -5,6 +5,7 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/)
 [ "$code" = "200" ] && pass "Loja respondendo HTTP 200" || fail "Loja respondendo HTTP ${code:-sem resposta}"
@@ -27,7 +28,7 @@ fi
 probe=$(kubectl -n loja get deploy loja-web -o jsonpath='{.spec.template.spec.containers[0].readinessProbe}' 2>/dev/null)
 caminho=$(kubectl -n loja get deploy loja-web -o jsonpath='{.spec.template.spec.containers[0].readinessProbe.httpGet.path}' 2>/dev/null)
 if [ -z "$probe" ]; then
-  fail "A readiness probe foi removida: sem ela, a loja recebe clientes antes de estar pronta"
+  contorno "A readiness probe foi removida: sem ela, a loja recebe clientes antes de estar pronta"
 elif [ -n "$caminho" ]; then
   pod=$(kubectl -n loja get pods -l app=loja-web --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
   if [ -n "$pod" ] && kubectl -n loja exec "$pod" -- wget -q -O /dev/null "http://localhost:8080${caminho}" 2>/dev/null; then

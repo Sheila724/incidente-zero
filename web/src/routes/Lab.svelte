@@ -31,6 +31,9 @@
 
   let solution = $state(null);
   let confirmSolution = $state(false);
+  // Aviso quando a verificação falha "quase lá": contorno detectado ou parte dos itens ok
+  let aviso = $state(null);
+  let avisoBtn = $state(null);
   let confirmStop = $state(false);
   let stopping = $state(false);
 
@@ -74,6 +77,11 @@
     load();
     const t = setInterval(() => (now = Date.now()), 1000);
     const onKey = (e) => {
+      if (aviso && e.key === 'Escape') {
+        e.preventDefault();
+        aviso = null;
+        return;
+      }
       if (phase === 'lab' && e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         verify();
@@ -156,6 +164,7 @@
     try {
       const r = await api.check(id);
       check = r;
+      aviso = avisoDe(r);
       if (r.passed && r.result) result = r.result;
       if (r.passed) {
         api.scenarios().then((l) => (nextId = l.next && l.next !== id ? l.next : null)).catch(() => {});
@@ -167,6 +176,25 @@
       checking = false;
     }
   }
+
+  function avisoDe(r) {
+    if (r.passed || !r.items?.length) return null;
+    const contornos = r.items.filter((c) => c.workaround);
+    const faltam = r.items.filter((c) => !c.ok && !c.workaround);
+    const ok = r.items.filter((c) => c.ok).length;
+    if (contornos.length) return { tipo: 'contorno', contornos, faltam, ok, total: r.items.length };
+    if (ok > 0) return { tipo: 'parcial', contornos, faltam, ok, total: r.items.length };
+    return null;
+  }
+
+  function fecharAviso(irPara) {
+    aviso = null;
+    if (irPara) tab = irPara;
+  }
+
+  $effect(() => {
+    if (aviso && avisoBtn) avisoBtn.focus();
+  });
 
   async function reveal(n) {
     hintBusy = true;
@@ -489,7 +517,9 @@
             <ul class="checks">
               {#each check.items as c, i (i)}
                 <li>
-                  {#if c.ok}
+                  {#if c.workaround}
+                    <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label="Contorno"><circle cx="12" cy="12" r="11" fill="var(--violet-soft)"></circle><line x1="12" y1="7" x2="12" y2="13" stroke="var(--violet)" stroke-width="2.4" stroke-linecap="round"></line><circle cx="12" cy="16.8" r="1.4" fill="var(--violet)"></circle></svg>
+                  {:else if c.ok}
                     <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label="Passou"><circle cx="12" cy="12" r="11" fill="var(--green-soft)"></circle><polyline points="7.5 12.5 10.5 15.5 16.5 9" fill="none" stroke="var(--green)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
                   {:else}
                     <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label="Falhou"><circle cx="12" cy="12" r="11" fill="#2A1216"></circle><line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke="var(--red)" stroke-width="2.4" stroke-linecap="round"></line><line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke="var(--red)" stroke-width="2.4" stroke-linecap="round"></line></svg>
@@ -506,6 +536,37 @@
       </div>
     </section>
   </main>
+
+  {#if aviso}
+    <div class="aviso-fundo" role="presentation" onclick={(e) => e.target === e.currentTarget && fecharAviso()}>
+      <div class="aviso" class:contorno={aviso.tipo === 'contorno'} role="alertdialog" aria-modal="true" aria-labelledby="aviso-titulo" aria-describedby="aviso-texto">
+        <div class="aviso-icone" aria-hidden="true">
+          {#if aviso.tipo === 'contorno'}
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          {:else}
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          {/if}
+        </div>
+        {#if aviso.tipo === 'contorno'}
+          <h2 id="aviso-titulo">Isso esconde o sintoma, mas não corrige o problema</h2>
+          <p id="aviso-texto">A verificação reconheceu uma saída que, num plantão de verdade, cria outro problema ou faz o incidente voltar:</p>
+          <ul>{#each aviso.contornos as c, i (i)}<li class="c">{c.text}</li>{/each}</ul>
+          <p>Desfaça o contorno e procure a causa raiz. Você está perto.</p>
+        {:else}
+          <h2 id="aviso-titulo">Quase lá: ainda falta a causa raiz</h2>
+          <p id="aviso-texto">{aviso.ok} de {aviso.total} verificações já passam. O que ainda falta:</p>
+          <ul>{#each aviso.faltam as c, i (i)}<li>{c.text}</li>{/each}</ul>
+          <p>Num plantão, o incidente só fecha quando a causa está corrigida. Continue investigando.</p>
+        {/if}
+        <div class="aviso-acoes">
+          <button type="button" class="btn btn-primary" bind:this={avisoBtn} onclick={() => fecharAviso()}>Continuar tentando</button>
+          {#if hints.some((h) => !h.text)}
+            <button type="button" class="btn" onclick={() => fecharAviso('dicas')}>Ver dicas</button>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -617,6 +678,19 @@
   .checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   .checks li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--text-2); }
   .checks svg { flex: 0 0 18px; margin-top: 2px; }
+
+  .aviso-fundo { position: fixed; inset: 0; z-index: 50; background: rgba(4, 8, 12, 0.72); display: grid; place-items: center; padding: 16px; animation: surgir 0.15s ease-out; }
+  .aviso { width: min(520px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; background: var(--panel); border: 1px solid var(--blue); border-radius: 14px; padding: 22px 22px 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }
+  .aviso.contorno { border-color: var(--violet-line); box-shadow: 0 0 0 1px var(--violet-line), 0 24px 60px rgba(0, 0, 0, 0.5); }
+  .aviso-icone { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; color: var(--blue); background: #0E1B2B; margin-bottom: 12px; }
+  .contorno .aviso-icone { color: var(--violet); background: var(--violet-soft); }
+  .aviso h2 { margin: 0 0 8px; font-size: 19px; line-height: 1.3; }
+  .aviso p { margin: 0 0 10px; color: var(--text-2); font-size: 15px; }
+  .aviso ul { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text); font-size: 14px; }
+  .aviso li.c::marker { color: var(--violet); }
+  .aviso-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  @keyframes surgir { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .aviso-fundo { animation: none; } }
 
   @media (max-width: 900px) {
     .side { max-height: none; }

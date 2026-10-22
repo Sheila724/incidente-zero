@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/)
 [ "$code" = "200" ] && pass "Loja respondendo HTTP 200" || fail "Loja respondendo HTTP ${code:-sem resposta}"
@@ -11,13 +12,13 @@ code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/)
 if systemctl is-active --quiet trafego-clientes; then
   pass "Clientes continuam navegando (tráfego ativo)"
 else
-  fail "O tráfego de clientes foi desligado: tirar os clientes não é solução"
+  contorno "O tráfego de clientes foi desligado: tirar os clientes não é solução"
 fi
 
 if grep -q '^APP_VERSION=2.5.0' /etc/app/app.env; then
   pass "Versão 2.5.0 mantida (o cache de sessões continua no ar)"
 else
-  fail "A versão 2.5.0 foi desfeita: o objetivo é corrigir a configuração, não fazer rollback"
+  contorno "A versão 2.5.0 foi desfeita: o objetivo é corrigir a configuração, não fazer rollback"
 fi
 
 limite=$(curl -s -m 5 http://127.0.0.1:8080/health | jq -r '.session_cache_max // empty' 2>/dev/null)

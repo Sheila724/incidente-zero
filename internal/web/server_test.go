@@ -14,10 +14,21 @@ import (
 )
 
 func TestParseCheck(t *testing.T) {
-	out := "✅ Serviço ativo\nlinha qualquer\n❌ Site respondendo HTTP 503\n  ✅ Bônus: algo\n"
+	out := "✅ Serviço ativo\nlinha qualquer\n❌ Site respondendo HTTP 503\n  ✅ Bônus: algo\n⚠️ Rollback não resolve\n⚠ Sem o seletor\n"
 	items := parseCheck(out)
-	if len(items) != 3 {
-		t.Fatalf("esperava 3 itens, veio %d", len(items))
+	if len(items) != 5 {
+		t.Fatalf("esperava 5 itens, veio %d", len(items))
+	}
+	for _, i := range []int{3, 4} {
+		if items[i].OK || !items[i].Contorno {
+			t.Errorf("item %d deveria ser contorno: %+v", i, items[i])
+		}
+	}
+	if items[3].Text != "Rollback não resolve" || items[4].Text != "Sem o seletor" {
+		t.Errorf("texto do contorno errado: %q / %q", items[3].Text, items[4].Text)
+	}
+	if items[1].Contorno {
+		t.Errorf("❌ não é contorno: %+v", items[1])
 	}
 	if !items[0].OK || items[0].Text != "Serviço ativo" {
 		t.Errorf("item 0 errado: %+v", items[0])

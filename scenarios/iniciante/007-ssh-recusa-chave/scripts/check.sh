@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 SSHOPTS="-o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5"
 
@@ -12,12 +13,12 @@ systemctl is-active --quiet ssh && pass "Serviço ssh ativo" || fail "O serviço
 # Sem atalhos que enfraquecem o SSH
 cfg=$(sshd -T 2>/dev/null)
 if echo "$cfg" | grep -qx 'strictmodes no'; then
-  fail "StrictModes foi desligado: isso remove a proteção para todos os usuários"
+  contorno "StrictModes foi desligado: isso remove a proteção para todos os usuários"
 else
   pass "StrictModes continua ligado"
 fi
 if echo "$cfg" | grep -qx 'passwordauthentication yes'; then
-  fail "Login por senha foi habilitado: o pipeline deve entrar por chave"
+  contorno "Login por senha foi habilitado: o pipeline deve entrar por chave"
 else
   pass "Login por senha continua desligado"
 fi

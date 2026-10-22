@@ -5,6 +5,7 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/)
 [ "$code" = "200" ] && pass "Loja respondendo HTTP 200" || fail "Loja respondendo HTTP ${code:-sem resposta}"
@@ -13,7 +14,7 @@ img=$(kubectl -n loja get deploy loja-web -o jsonpath='{.spec.template.spec.cont
 case "$img" in
   registry.loja.local/loja-web:2.6) pass "Deployment usando a imagem publicada: $img" ;;
   *:v2.6) fail "Deployment ainda pede uma imagem que não existe: $img" ;;
-  *) fail "A versão 2.6 não está no ar (imagem: ${img:-?}). Desfazer o deploy não atende o marketing" ;;
+  *) contorno "A versão 2.6 não está no ar (imagem: ${img:-?}). Desfazer o deploy não atende o marketing" ;;
 esac
 
 read -r desejadas atualizadas prontas total <<< "$(kubectl -n loja get deploy loja-web \
