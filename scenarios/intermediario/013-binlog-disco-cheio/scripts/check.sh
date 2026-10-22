@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 systemctl is-active --quiet mariadb && pass "MariaDB ativo" || fail "O MariaDB não está ativo"
 
@@ -29,7 +30,7 @@ if [ -f "$indice" ]; then
   if [ "$faltando" -eq 0 ]; then
     pass "Índice do binlog consistente com os arquivos no disco"
   else
-    fail "O índice do binlog lista $faltando arquivo(s) que não existem mais: binlogs apagados com rm em vez de PURGE BINARY LOGS"
+    contorno "O índice do binlog lista $faltando arquivo(s) que não existem mais: binlogs apagados com rm em vez de PURGE BINARY LOGS"
   fi
 else
   pass "Binlog desligado: não há índice para conferir"

@@ -62,6 +62,7 @@ Rodando de dentro do repositório, o `iz` usa a pasta `scenarios/` local, então
 - Dicas progressivas, conceitos para estudar e, no fim, a solução e a causa raiz.
 - **Monitoramento ao vivo**: HTTP, porta 80, CPU, memória, disco e inodes, que mudam enquanto você corrige.
 - Botão **Verificar** (`Ctrl+Enter`) e, depois de resolver, o atalho para o **próximo incidente**.
+- **Aviso de contorno**: se você esconder o sintoma sem corrigir a causa (rollback, desligar o serviço, remover uma proteção), ou se faltar só parte da correção, a verificação avisa e pede para continuar tentando.
 
 ### Zabbix de verdade nos labs
 

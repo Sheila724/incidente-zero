@@ -35,7 +35,7 @@ cp -r scenarios/iniciante/001-disco-cheio scenarios/iniciante/016-meu-cenario
 | `referencias.md` | Leituras para aprofundar |
 | `scripts/setup.sh` | Monta o ambiente **saudável** |
 | `scripts/inject.sh` | Injeta a falha e confere que ela apareceu |
-| `scripts/check.sh` | Valida a correção: uma linha ✅/❌ por verificação, exit 0 = resolvido |
+| `scripts/check.sh` | Valida a correção: uma linha ✅/❌ por verificação, exit 0 = resolvido. Use ⚠️ (com exit 1) quando reconhecer um contorno, como rollback, desligar o serviço ou remover uma proteção: a interface avisa a pessoa que aquilo esconde o sintoma sem corrigir a causa |
 | `scripts/solve.sh` | A solução de referência, usada pelos testes automáticos |
 
 O ID segue o padrão `NNN-nome-em-minusculas`, igual ao nome da pasta, com um número que ainda não existe.

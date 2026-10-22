@@ -4,7 +4,8 @@ hints:
     text: >
       CrashLoopBackOff quer dizer: o container inicia, morre e o Kubernetes
       espera cada vez mais antes de tentar de novo. O motivo quase sempre está
-      no que o container escreveu antes de morrer: `kubectl logs <pod> --previous`.
+      no que o container escreveu antes de morrer: `kubectl logs <pod>` (ou
+      `--previous`, se um container novo já tiver subido).
 
   - level: 2
     cost: 20

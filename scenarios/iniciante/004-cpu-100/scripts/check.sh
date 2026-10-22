@@ -4,17 +4,18 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 # 1. O gerador de relatórios precisa continuar ligado
 if systemctl is-active --quiet report-worker; then
   pass "Gerador de relatórios ativo"
 else
-  fail "O report-worker está parado: o financeiro precisa dos relatórios"
+  contorno "O report-worker está parado: o financeiro precisa dos relatórios"
 fi
 if systemctl is-enabled --quiet report-worker 2>/dev/null; then
   pass "Gerador de relatórios habilitado no boot"
 else
-  fail "O report-worker foi desabilitado e não sobe no próximo boot"
+  contorno "O report-worker foi desabilitado e não sobe no próximo boot"
 fi
 
 # 2. Causa raiz: intervalo configurado

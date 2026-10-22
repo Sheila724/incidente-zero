@@ -19,7 +19,7 @@ cliente → nginx :80 → Service loja-web :30080 → pods loja-web (2 réplicas
 kubectl get pods                    # estado e reinícios de cada pod
 kubectl describe pod <pod>          # detalhes e eventos (o "histórico" do pod)
 kubectl logs <pod>                  # saída do container atual
-kubectl logs <pod> --previous       # saída da execução que morreu
+kubectl logs <pod> --previous       # saída da execução anterior à atual
 kubectl get deploy loja-web -o yaml # a especificação completa
 kubectl get events --sort-by=.lastTimestamp
 ```
@@ -32,6 +32,14 @@ kubectl get events --sort-by=.lastTimestamp
 | `CrashLoopBackOff` | O container inicia e morre; o Kubernetes espera cada vez mais para tentar de novo (10 s, 20 s, 40 s... até 5 min) |
 | `Error` | O container terminou com erro (código de saída diferente de 0) |
 | `CreateContainerConfigError` | Falta algo para montar o container (ex.: uma ConfigMap ou Secret que não existe) |
+
+## Qual log eu estou vendo?
+
+Enquanto o pod espera a próxima tentativa (`CrashLoopBackOff`), não há container rodando: `kubectl logs <pod>` mostra a última execução, a que morreu. Quando um container novo já subiu, use `--previous` para ver a anterior. O Kubernetes guarda só a última execução encerrada de cada container, então o `--previous` pode responder `unable to retrieve container logs` se não houver uma anterior guardada.
+
+## Mensagem de término
+
+Quando um container termina, o Kubernetes guarda em `Last State` o motivo, o código de saída e, se a aplicação escreveu, uma **mensagem de término** (o arquivo `/dev/termination-log`). Ela aparece em `kubectl describe pod` e sobrevive mesmo quando os logs da execução anterior já foram descartados.
 
 ## Por que apagar o pod não resolve
 

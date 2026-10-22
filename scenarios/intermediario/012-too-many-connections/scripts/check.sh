@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 systemctl is-active --quiet mariadb && pass "MariaDB ativo" || fail "O MariaDB não está ativo"
 
@@ -13,7 +14,7 @@ code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/checkout)
 if grep -Eq '^[^#]*relatorio-vendas\.py' /etc/cron.d/relatorio-vendas 2>/dev/null; then
   pass "O relatório do financeiro continua agendado"
 else
-  fail "O relatório foi desligado: o financeiro depende dele. Corrija a causa em vez de desativar o job"
+  contorno "O relatório foi desligado: o financeiro depende dele. Corrija a causa em vez de desativar o job"
 fi
 
 conexoes_relatorio() {

@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 site_ok() {
   for p in / /produtos/ /img/logo.svg; do
@@ -20,7 +21,7 @@ done
 
 # Segurança: corrigir com 777 não vale
 if [ -n "$(find /var/www/loja -perm -o+w 2>/dev/null | head -1)" ]; then
-  fail "Há arquivos ou pastas graváveis por qualquer usuário (o+w): isso abre uma falha de segurança"
+  contorno "Há arquivos ou pastas graváveis por qualquer usuário (o+w): isso abre uma falha de segurança"
 else
   pass "Nenhum arquivo do site gravável por qualquer usuário"
 fi

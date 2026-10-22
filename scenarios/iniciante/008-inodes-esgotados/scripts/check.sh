@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 ipct=$(df --output=ipcent /var/lib/app 2>/dev/null | tail -1 | tr -dc 0-9)
 if [ -n "$ipct" ] && [ "$ipct" -lt 80 ]; then
@@ -15,7 +16,7 @@ fi
 if [ -d /var/lib/app/sessions ] && [ "$(stat -c %U /var/lib/app/sessions)" = "app" ]; then
   pass "Pasta de sessões presente e do usuário app"
 else
-  fail "A pasta /var/lib/app/sessions sumiu ou mudou de dono"
+  contorno "A pasta /var/lib/app/sessions sumiu ou mudou de dono"
 fi
 
 systemctl is-active --quiet app && pass "Serviço app ativo" || fail "Serviço app não está ativo"

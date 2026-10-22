@@ -27,7 +27,8 @@ data:
     #!/bin/sh
     echo "Loja Exemplo $APP_VERSION iniciando..."
     if [ -z "$DATABASE_URL" ]; then
-      echo "ERRO FATAL: variável de ambiente DATABASE_URL não definida" >&2
+      # O motivo também vai para a mensagem de término (kubectl describe pod → Last State)
+      echo "ERRO FATAL: variável de ambiente DATABASE_URL não definida" | tee /dev/termination-log >&2
       echo "Não é possível conectar ao banco. Encerrando." >&2
       exit 1
     fi

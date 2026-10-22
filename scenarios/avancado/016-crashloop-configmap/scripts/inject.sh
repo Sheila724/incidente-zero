@@ -6,7 +6,7 @@ set -euo pipefail
 umask 022
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-kubectl -n loja apply -f - >/dev/null <<'YAML'
+kubectl -n loja replace -f - >/dev/null <<'YAML'
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -4,6 +4,7 @@
 status=0
 pass() { echo "✅ $1"; }
 fail() { echo "❌ $1"; status=1; }
+contorno() { echo "⚠️ $1"; status=1; }   # saída que só esconde o sintoma
 
 code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' http://localhost/checkout)
 [ "$code" = "200" ] && pass "Checkout respondendo HTTP 200" || fail "Checkout respondendo HTTP ${code:-sem resposta}"
@@ -16,7 +17,7 @@ else
 fi
 
 if grep -Eq '^[^#]*api\.pagamentos\.interno' /etc/hosts; then
-  fail "O /etc/hosts ainda fixa o IP da API: na próxima migração o problema volta. O nome deve vir do DNS"
+  contorno "O /etc/hosts ainda fixa o IP da API: na próxima migração o problema volta. O nome deve vir do DNS"
 else
   pass "Nenhum IP fixado no /etc/hosts: o nome vem do DNS interno"
 fi

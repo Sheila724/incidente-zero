@@ -354,6 +354,10 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 type checkItem struct {
 	OK   bool   `json:"ok"`
 	Text string `json:"text"`
+	// Contorno: o check reconheceu uma saída que some com o sintoma sem
+	// corrigir a causa (rollback, desligar o serviço, remover a proteção...).
+	// Linhas "⚠️" no check.sh; contam como falha.
+	Contorno bool `json:"workaround,omitempty"`
 }
 
 func parseCheck(out string) []checkItem {
@@ -362,9 +366,12 @@ func parseCheck(out string) []checkItem {
 		line = strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(line, "✅"):
-			items = append(items, checkItem{true, strings.TrimSpace(strings.TrimPrefix(line, "✅"))})
+			items = append(items, checkItem{OK: true, Text: strings.TrimSpace(strings.TrimPrefix(line, "✅"))})
 		case strings.HasPrefix(line, "❌"):
-			items = append(items, checkItem{false, strings.TrimSpace(strings.TrimPrefix(line, "❌"))})
+			items = append(items, checkItem{OK: false, Text: strings.TrimSpace(strings.TrimPrefix(line, "❌"))})
+		case strings.HasPrefix(line, "⚠"):
+			txt := strings.TrimPrefix(strings.TrimPrefix(line, "⚠"), "\uFE0F")
+			items = append(items, checkItem{OK: false, Text: strings.TrimSpace(txt), Contorno: true})
 		}
 	}
 	return items
@@ -384,12 +391,21 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{"passed": code == 0, "items": items, "output": out, "at": time.Now().UnixMilli()}
 	if code != 0 {
 		ok := 0
+		var contornos []string
 		for _, it := range items {
 			if it.OK {
 				ok++
 			}
+			if it.Contorno {
+				contornos = append(contornos, it.Text)
+			}
 		}
-		_ = s.Store.Log(sc.ID, "check", fmt.Sprintf("Verificação: %d de %d itens ok", ok, len(items)))
+		msg := fmt.Sprintf("Verificação: %d de %d itens ok", ok, len(items))
+		if len(contornos) > 0 {
+			resp["workaround"] = true
+			msg += " · contorno: " + strings.Join(contornos, "; ")
+		}
+		_ = s.Store.Log(sc.ID, "check", msg)
 	}
 	if code == 0 {
 		before := s.Store.Get(sc.ID)
