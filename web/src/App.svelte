@@ -2,17 +2,25 @@
   import Central from './routes/Central.svelte';
   import Lab from './routes/Lab.svelte';
   import Postmortem from './routes/Postmortem.svelte';
+  import Plantao from './routes/Plantao.svelte';
+  import AlertaPlantao from './lib/AlertaPlantao.svelte';
+  import { acompanharPlantao } from './lib/plantao.svelte.js';
 
-  // Rotas por hash: #/, #/lab/<id> e #/postmortem/<id>
+  // Rotas por hash: #/, #/lab/<id>, #/postmortem/<id> e #/plantao
   function parse() {
     const h = location.hash.replace(/^#\/?/, '');
     const [page, id] = h.split('/');
     if (page === 'lab' && id) return { page: 'lab', id: decodeURIComponent(id) };
     if (page === 'postmortem' && id) return { page: 'postmortem', id: decodeURIComponent(id) };
+    if (page === 'plantao') return { page: 'plantao' };
     return { page: 'central' };
   }
 
   let route = $state(parse());
+
+  $effect(() => {
+    acompanharPlantao();
+  });
 
   $effect(() => {
     const onHash = () => {
@@ -32,6 +40,10 @@
   {#key route.id}
     <Postmortem id={route.id} />
   {/key}
+{:else if route.page === 'plantao'}
+  <Plantao />
 {:else}
   <Central />
 {/if}
+
+<AlertaPlantao />

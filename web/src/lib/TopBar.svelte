@@ -1,5 +1,6 @@
 <script>
   import Logo from './Logo.svelte';
+  import { plantao } from './plantao.svelte.js';
 
   let { status = null, current = 'central' } = $props();
 
@@ -11,6 +12,12 @@
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }
   }
+
+  const turno = $derived(plantao.dados?.turno ?? null);
+  const fimTurno = $derived(
+    turno ? new Date(turno.fim).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
+  );
+  const emIncidente = $derived(['alertando', 'reconhecido'].includes(plantao.dados?.incidente?.status));
 
   const engine = $derived(
     !status
@@ -31,7 +38,14 @@
     <a href="#/" class:active={current === 'central'}>Central</a>
     <button type="button" onclick={() => scrollTo('trilhas')}>Trilhas</button>
     <button type="button" onclick={() => scrollTo('cenarios')}>Cenários</button>
+    <a href="#/plantao" class:active={current === 'plantao'}>Plantão</a>
   </nav>
+  {#if turno}
+    <a href="#/plantao" class="turno mono" class:incidente={emIncidente} title="Modo Plantão em andamento">
+      <span class="tdot" aria-hidden="true"></span>
+      {emIncidente ? 'incidente aberto' : `de plantão até ${fimTurno}`}
+    </a>
+  {/if}
   <div class="engine mono" title="Motor dos labs">
     <span class="dot" style:background={engine.color}></span>
     {engine.text}
@@ -53,12 +67,30 @@
   }
   nav a:hover, nav button:hover { color: var(--text); }
   nav a.active { color: var(--text); font-weight: 600; background: var(--chip); }
+  .turno {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; text-decoration: none;
+    color: var(--accent); border: 1px solid var(--accent-line); background: var(--accent-soft);
+    border-radius: 999px; padding: 6px 12px;
+  }
+  .turno.incidente { color: #F9A9AD; border-color: var(--red-line); background: var(--red-soft); }
+  .tdot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: vivo 2s ease-in-out infinite; }
+  @keyframes vivo { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .tdot { animation: none; } }
   .engine {
     margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px;
     color: var(--muted); border: 1px solid #222C3A; border-radius: 999px; padding: 6px 12px;
   }
   @media (max-width: 640px) {
     header { padding: 12px 16px; }
-    .engine { margin-left: 0; }
+    .turno {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; text-decoration: none;
+    color: var(--accent); border: 1px solid var(--accent-line); background: var(--accent-soft);
+    border-radius: 999px; padding: 6px 12px;
+  }
+  .turno.incidente { color: #F9A9AD; border-color: var(--red-line); background: var(--red-soft); }
+  .tdot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: vivo 2s ease-in-out infinite; }
+  @keyframes vivo { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .tdot { animation: none; } }
+  .engine { margin-left: 0; }
   }
 </style>

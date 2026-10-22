@@ -78,6 +78,17 @@ Os cenários da trilha avançada rodam um **Kubernetes de nó único (k3s) dentr
 
 Tudo funciona sem internet: as imagens do cluster já vêm dentro da imagem `lab-k3s`. Cada lab precisa de cerca de 1 GB de RAM livre (o limite é 2 GB) e leva uns 30 segundos a mais para subir, o tempo do cluster ficar pronto.
 
+### Modo Plantão
+
+Em **Plantão**, no topo da interface, você assume um turno (30 min, 1 h, 2 h ou 4 h), escolhe o ritmo (calmo, normal ou intenso) e as trilhas. Os incidentes caem sem aviso, em horários sorteados, um por vez:
+
+- **Alerta de verdade:** notificação do navegador, alarme sonoro e um alerta na tela, em qualquer página, até você clicar em **Reconhecer**.
+- **Escalonamento:** sem reconhecimento em 5 minutos, o incidente é escalado e perde 20 pontos.
+- **Sem modo guiado:** o lab abre como num plantão real; as dicas continuam disponíveis, com custo.
+- **Relatório do turno:** incidentes atendidos, MTTA (tempo até reconhecer), MTTR, escalonamentos e pontos.
+
+Deixe a aba aberta durante o turno. Se o turno acabar com você trabalhando num incidente reconhecido, dá para terminar o que começou.
+
 ### Postmortem guiado
 
 Depois de resolver, o botão **Escrever postmortem** abre um documento já com a **linha do tempo do seu plantão**: quando o alerta abriu, cada verificação, cada dica e a resolução. Você completa as seções de um postmortem sem culpados:
@@ -204,7 +215,8 @@ iz stop         # destrói o lab
 - [x] Binários prontos para download, instalador e CI
 - [x] Demo online com HTTPS e senha, e limpeza automática de labs
 - [ ] Variações nos cenários (nomes, portas e serviços diferentes a cada execução)
-- [ ] **Modo Plantão:** escala de disponibilidade, incidentes sorteados, alertas no celular, ack, escalonamento e relatório do turno
+- [x] **Modo Plantão:** turno com incidentes sorteados, alerta com som e notificação, reconhecimento, escalonamento e relatório do turno
+- [ ] Modo Plantão: escala semanal e alertas no celular
 
 ## Arquitetura
 

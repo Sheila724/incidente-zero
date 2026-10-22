@@ -33,6 +33,10 @@ export const api = {
   hint: (id, n) => request('POST', `/scenarios/${encodeURIComponent(id)}/hints/${n}`),
   solution: (id) => request('GET', `/scenarios/${encodeURIComponent(id)}/solution`),
   postmortem: (id, tz = '') => request('GET', `/scenarios/${encodeURIComponent(id)}/postmortem?tz=${encodeURIComponent(tz)}`),
+  plantao: () => request('GET', '/plantao'),
+  assumirPlantao: (dados) => request('POST', '/plantao', dados),
+  encerrarPlantao: () => request('POST', '/plantao/encerrar'),
+  reconhecer: () => request('POST', '/plantao/reconhecer'),
   savePostmortem: (id, pm, tz = '') =>
     request('PUT', `/scenarios/${encodeURIComponent(id)}/postmortem?tz=${encodeURIComponent(tz)}`, pm)
 };

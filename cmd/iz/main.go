@@ -19,6 +19,7 @@ import (
 	incidentezero "github.com/Sheila724/incidente-zero"
 
 	"github.com/Sheila724/incidente-zero/internal/lab"
+	"github.com/Sheila724/incidente-zero/internal/plantao"
 	"github.com/Sheila724/incidente-zero/internal/progress"
 	"github.com/Sheila724/incidente-zero/internal/scenario"
 	"github.com/Sheila724/incidente-zero/internal/web"
@@ -410,12 +411,18 @@ func cmdUI(args []string) error {
 	if err != nil {
 		return fmt.Errorf("progresso: %w", err)
 	}
+	turnos, err := plantao.Open(plantao.DefaultPath(progress.DefaultPath()))
+	if err != nil {
+		return fmt.Errorf("plantão: %w", err)
+	}
 	srv := &web.Server{
 		ScenariosDir: scenariosDir(),
 		Store:        store,
 		Static:       webui.FS(),
 		Version:      version,
+		Plantao:      turnos,
 	}
+	go srv.AgendarPlantao(context.Background())
 	fmt.Printf("Incidente Zero rodando em http://%s  (Ctrl+C para sair)\n", *addr)
 	if !strings.HasPrefix(*addr, "127.0.0.1") && !strings.HasPrefix(*addr, "localhost") {
 		fmt.Println("Atenção: a interface dá acesso a terminais. Exponha só atrás de um proxy com autenticação.")
