@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -52,6 +53,7 @@ func cmdSelftest(args []string) error {
 		if err != nil {
 			status = "❌ " + err.Error()
 			falhas++
+			anotarFalha(s, err)
 		}
 		if !*manter {
 			_ = lab.Stop(s)
@@ -85,6 +87,7 @@ func selftestUm(s *scenario.Scenario, espera time.Duration) error {
 	} {
 		passo(st.nome)
 		out, code, err := lab.RunScript(s, st.script)
+		ultimaSaida = out
 		if err != nil || code != 0 {
 			fmt.Print(indentar(out))
 			return fmt.Errorf("%s falhou (código %d)", st.nome, code)
@@ -93,6 +96,7 @@ func selftestUm(s *scenario.Scenario, espera time.Duration) error {
 
 	passo("check antes da solução (precisa falhar)")
 	out, code, err := lab.RunScript(s, s.Scripts.Check)
+	ultimaSaida = out
 	if err != nil {
 		return fmt.Errorf("check: %v", err)
 	}
@@ -103,6 +107,7 @@ func selftestUm(s *scenario.Scenario, espera time.Duration) error {
 
 	passo("aplicando a solução de referência")
 	out, code, err = lab.RunScript(s, s.Scripts.Solve)
+	ultimaSaida = out
 	if err != nil || code != 0 {
 		fmt.Print(indentar(out))
 		return fmt.Errorf("solve falhou (código %d)", code)
@@ -112,6 +117,7 @@ func selftestUm(s *scenario.Scenario, espera time.Duration) error {
 	limite := time.Now().Add(espera)
 	for {
 		out, code, err = lab.RunScript(s, s.Scripts.Check)
+		ultimaSaida = out
 		if err == nil && code == 0 {
 			return nil
 		}
@@ -121,6 +127,26 @@ func selftestUm(s *scenario.Scenario, espera time.Duration) error {
 		}
 		time.Sleep(10 * time.Second)
 	}
+}
+
+// ultimaSaida guarda a última saída de script, para o diagnóstico de uma falha.
+var ultimaSaida string
+
+// anotarFalha, no GitHub Actions, publica a falha como anotação (visível no PR
+// e pela API), com a saída do check e o estado do lab.
+func anotarFalha(s *scenario.Scenario, err error) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		return
+	}
+	diag, _, _ := lab.Exec(s, "systemctl --failed --no-legend --plain 2>&1 | head -10\n"+
+		"echo '--- avisos'; journalctl -p warning -n 15 --no-pager 2>&1 | cut -c1-200\n"+
+		"echo '--- journal'; journalctl -n 25 --no-pager 2>&1 | cut -c1-200\n", 20*time.Second)
+	texto := fmt.Sprintf("%v\n\n%s\n%s", err, strings.TrimSpace(ultimaSaida), diag)
+	if len(texto) > 3500 {
+		texto = texto[:3500]
+	}
+	esc := strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A").Replace(texto)
+	fmt.Printf("::error title=Selftest %s::%s\n", s.ID, esc)
 }
 
 func indentar(s string) string {
