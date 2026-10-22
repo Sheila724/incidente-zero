@@ -10,6 +10,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/Sheila724/incidente-zero/internal/plantao"
 	"github.com/Sheila724/incidente-zero/internal/progress"
 )
 
@@ -127,5 +128,71 @@ func TestSemInterfaceCompilada(t *testing.T) {
 	res.Body.Close()
 	if !strings.Contains(string(body), "Interface não compilada") {
 		t.Error("sem dist/index.html, a página deveria explicar como compilar a interface")
+	}
+}
+
+func TestPlantaoAPI(t *testing.T) {
+	store, err := progress.Open(filepath.Join(t.TempDir(), "p.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pl, err := plantao.Open(filepath.Join(t.TempDir(), "plantao.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &Server{ScenariosDir: filepath.Join("..", "..", "scenarios"), Store: store, Static: fstest.MapFS{}, Plantao: pl}
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+
+	post := func(path, body string) (int, map[string]any) {
+		res, err := http.Post(ts.URL+path, "application/json", strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var m map[string]any
+		_ = json.NewDecoder(res.Body).Decode(&m)
+		return res.StatusCode, m
+	}
+
+	if code, _ := post("/api/plantao", `{"duracaoMin":60,"ritmo":"normal","trilhas":["inexistente"]}`); code != http.StatusBadRequest {
+		t.Errorf("trilha sem cenários: esperava 400, veio %d", code)
+	}
+	if code, m := post("/api/plantao", `{"duracaoMin":60,"ritmo":"normal","trilhas":["iniciante"]}`); code != http.StatusOK {
+		t.Fatalf("assumir: %d %v", code, m)
+	}
+	if code, _ := post("/api/plantao", `{"duracaoMin":60,"ritmo":"normal","trilhas":["iniciante"]}`); code != http.StatusConflict {
+		t.Errorf("segundo turno: esperava 409, veio %d", code)
+	}
+
+	res, err := http.Get(ts.URL + "/api/plantao")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if strings.Contains(string(raw), "proximo") {
+		t.Error("a API não pode revelar quando o próximo incidente cai")
+	}
+	var g struct {
+		Turno *struct {
+			Ritmo   string
+			Trilhas []string
+		}
+		Incidente any
+	}
+	_ = json.Unmarshal(raw, &g)
+	if g.Turno == nil || g.Turno.Ritmo != "normal" || g.Incidente != nil {
+		t.Errorf("estado do plantão errado: %s", raw)
+	}
+
+	if code, _ := post("/api/plantao/reconhecer", ``); code != http.StatusConflict {
+		t.Errorf("reconhecer sem incidente: esperava 409, veio %d", code)
+	}
+	if code, m := post("/api/plantao/encerrar", ``); code != http.StatusOK {
+		t.Errorf("encerrar: %d %v", code, m)
+	}
+	if code, _ := post("/api/plantao/encerrar", ``); code != http.StatusConflict {
+		t.Errorf("encerrar de novo: esperava 409, veio %d", code)
 	}
 }

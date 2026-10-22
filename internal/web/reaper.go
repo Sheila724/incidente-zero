@@ -77,6 +77,9 @@ func (s *Server) reapOnce(idle time.Duration) {
 	s.seenMu.Unlock()
 
 	for _, id := range expired {
+		if s.incidenteDoPlantao(id) {
+			continue // incidente de plantão aberto: o alerta pode estar tocando sem ninguém na tela
+		}
 		sc, err := scenario.Find(s.ScenariosDir, id)
 		if err != nil {
 			continue

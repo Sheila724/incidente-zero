@@ -6,6 +6,7 @@
   import Sparkline from '../lib/Sparkline.svelte';
   import { api } from '../lib/api.js';
   import { sev, clock, duration } from '../lib/format.js';
+  import { plantao, atualizarPlantao } from '../lib/plantao.svelte.js';
 
   let { id } = $props();
 
@@ -39,6 +40,24 @@
 
   let now = $state(Date.now());
   let nextId = $state(null);
+
+  // Incidente do Modo Plantão: sem modo guiado e sem "Encerrar"
+  let foiDoPlantao = $state(false);
+  const doPlantao = $derived(
+    plantao.dados?.incidente?.id === id && ['alertando', 'reconhecido'].includes(plantao.dados?.incidente?.status)
+  );
+  $effect(() => {
+    if (doPlantao) foiDoPlantao = true;
+  });
+  $effect(() => {
+    if (foiDoPlantao && tab === 'guiado') tab = 'briefing';
+  });
+  const pontosPlantao = $derived.by(() => {
+    if (!foiDoPlantao) return null;
+    const lista = plantao.dados?.turno?.incidentes ?? plantao.dados?.anteriores?.[0]?.incidentes ?? [];
+    const i = [...lista].reverse().find((x) => x.id === id && x.status === 'resolvido');
+    return i ? { pontos: i.pontos, escalado: i.escalado } : null;
+  });
 
   const sc = $derived(detail?.scenario);
   const sv = $derived(sev(sc?.severity));
@@ -166,6 +185,10 @@
       check = r;
       aviso = avisoDe(r);
       if (r.passed && r.result) result = r.result;
+      if (r.plantao) {
+        foiDoPlantao = true;
+        atualizarPlantao();
+      }
       if (r.passed) {
         api.scenarios().then((l) => (nextId = l.next && l.next !== id ? l.next : null)).catch(() => {});
       }
@@ -231,7 +254,7 @@
 
   const tabs = $derived([
     ['briefing', 'Briefing'],
-    ...(detail?.guided?.length ? [['guiado', 'Guiado']] : []),
+    ...(detail?.guided?.length && !foiDoPlantao ? [['guiado', 'Guiado']] : []),
     ['conceitos', 'Conceitos'],
     ['dicas', `Dicas ${hintsRevealed}/${hints.length}`],
     ...(solution ? [['solucao', 'Solução']] : [])
@@ -369,7 +392,9 @@
       <button type="button" class="btn btn-primary" onclick={verify} disabled={checking}>
         {#if checking}<span class="spinner"></span>Verificando{:else}Verificar <span class="kbd">Ctrl+Enter</span>{/if}
       </button>
-      {#if confirmStop}
+      {#if doPlantao}
+        <a class="btn btn-ghost" href="#/plantao" title="Este incidente é do plantão: resolva-o ou encerre o turno">Plantão</a>
+      {:else if confirmStop}
         <button type="button" class="btn btn-danger" onclick={stop} disabled={stopping}>Confirmar: destruir o lab</button>
         <button type="button" class="btn btn-ghost" onclick={() => (confirmStop = false)}>Cancelar</button>
       {:else}
@@ -392,10 +417,15 @@
             <div><span class="mono">{result.points ?? '—'}</span><small>pontos</small></div>
           </div>
           {#if result.solutionViewed}<p class="faint small">A solução foi aberta antes da correção, então esta tentativa não pontua.</p>{/if}
+          {#if pontosPlantao}
+            <p class="faint small">Plantão: {pontosPlantao.pontos} pontos no turno{pontosPlantao.escalado ? ' (−20 por escalonamento)' : ''}.</p>
+          {/if}
           <div class="result-actions">
             <a class="btn btn-primary" href={`#/postmortem/${id}`}>Escrever postmortem</a>
             <button type="button" class="btn" onclick={() => loadSolution(true)}>Solução e causa raiz</button>
-            {#if nextId}
+            {#if foiDoPlantao}
+              <a class="btn" href="#/plantao">Voltar ao plantão</a>
+            {:else if nextId}
               <a class="btn" href={`#/lab/${nextId}`}>Próximo incidente</a>
             {:else}
               <a class="btn" href="#/">Voltar à central</a>

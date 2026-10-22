@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Sheila724/incidente-zero/internal/lab"
+	"github.com/Sheila724/incidente-zero/internal/plantao"
 	"github.com/Sheila724/incidente-zero/internal/progress"
 	"github.com/Sheila724/incidente-zero/internal/scenario"
 )
@@ -25,6 +26,7 @@ type Server struct {
 	Store        *progress.Store
 	Static       fs.FS // conteúdo de web/dist
 	Version      string
+	Plantao      *plantao.Plantao // Modo Plantão (nil desliga)
 
 	labMu sync.Mutex // um start/stop por vez
 
@@ -49,6 +51,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/scenarios/{id}/postmortem", s.postmortemGet)
 	mux.HandleFunc("PUT /api/scenarios/{id}/postmortem", s.postmortemSave)
 	mux.HandleFunc("GET /api/scenarios/{id}/postmortem.md", s.postmortemMarkdown)
+	mux.HandleFunc("GET /api/plantao", s.plantaoGet)
+	mux.HandleFunc("POST /api/plantao", s.plantaoAssumir)
+	mux.HandleFunc("POST /api/plantao/encerrar", s.plantaoEncerrar)
+	mux.HandleFunc("POST /api/plantao/reconhecer", s.plantaoReconhecer)
 	mux.HandleFunc("/apps/{id}/{app}/", s.appProxy)
 	mux.HandleFunc("/apps/{id}/{app}", s.appProxy)
 	mux.Handle("/", s.spa())
@@ -300,10 +306,40 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if msg := s.bloqueadoPeloPlantao(sc.ID); msg != "" {
+		writeErr(w, http.StatusConflict, msg)
+		return
+	}
+	t0 := time.Now()
+	out, err := s.subirLab(sc)
+	if err != nil {
+		code := -1
+		var se *scriptErr
+		if errors.As(err, &se) {
+			code = se.code
+		}
+		writeErr(w, http.StatusInternalServerError, err.Error(), map[string]any{"output": out, "code": code})
+		return
+	}
+	if err := s.Store.Start(sc.ID); err != nil {
+		log.Printf("progresso: %v", err)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "ms": time.Since(t0).Milliseconds()})
+}
+
+type scriptErr struct {
+	msg  string
+	code int
+}
+
+func (e *scriptErr) Error() string { return e.msg }
+
+// subirLab sobe o lab do cenário com a falha injetada (setup + inject).
+// Um lab por vez: os outros são removidos.
+func (s *Server) subirLab(sc *scenario.Scenario) (string, error) {
 	s.labMu.Lock()
 	defer s.labMu.Unlock()
 
-	// Um incidente por vez
 	for id := range runningSet() {
 		if id == sc.ID {
 			continue
@@ -312,11 +348,8 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 			_ = lab.Stop(other)
 		}
 	}
-
-	t0 := time.Now()
 	if err := lab.Start(sc); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
+		return "", err
 	}
 	for _, step := range []struct{ name, script string }{
 		{"setup", sc.Scripts.Setup}, {"inject", sc.Scripts.Inject},
@@ -327,19 +360,19 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				msg += ": " + err.Error()
 			}
-			writeErr(w, http.StatusInternalServerError, msg, map[string]any{"output": out, "code": code})
-			return
+			return out, &scriptErr{msg, code}
 		}
 	}
-	if err := s.Store.Start(sc.ID); err != nil {
-		log.Printf("progresso: %v", err)
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "ms": time.Since(t0).Milliseconds()})
+	return "", nil
 }
 
 func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	sc, ok := s.find(w, r)
 	if !ok {
+		return
+	}
+	if s.incidenteDoPlantao(sc.ID) {
+		writeErr(w, http.StatusConflict, "este incidente é do plantão: resolva-o ou encerre o turno")
 		return
 	}
 	s.labMu.Lock()
@@ -414,9 +447,17 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Printf("progresso: %v", err)
 			}
+			pts := pointsOf(before, sc)
 			resp["result"] = map[string]any{
 				"seconds": rec.LastSeconds, "hints": rec.LastHints,
-				"points": pointsOf(before, sc), "solutionViewed": before.SolutionViewed,
+				"points": pts, "solutionViewed": before.SolutionViewed,
+			}
+			if s.Plantao != nil {
+				if ok, err := s.Plantao.Resolver(sc.ID, pts, rec.LastHints); err != nil {
+					log.Printf("plantão: %v", err)
+				} else if ok {
+					resp["plantao"] = true
+				}
 			}
 		}
 	}
