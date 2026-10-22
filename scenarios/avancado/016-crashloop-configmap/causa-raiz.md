@@ -37,7 +37,7 @@
 
 | O que foi observado | Peso |
 |---|---|
-| `kubectl logs --previous` com "DATABASE_URL não definida" | Evidência |
+| `kubectl logs` e o `Last State` do pod com "DATABASE_URL não definida" | Evidência |
 | A ConfigMap sem `DATABASE_URL` e a anotação da mudança de ontem | Evidência da causa |
 | A loja ter caído logo depois da manutenção | Coincidência: a manutenção só revelou um erro que já estava lá |
 | Apagar um pod e o novo também falhar | Evidência de que o problema não está no pod, e sim no que ele herda |

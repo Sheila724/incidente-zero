@@ -28,7 +28,7 @@ O Deployment cria outro pod na hora, que vai para `Error` e depois para `CrashLo
 ## 3. Leia o motivo
 
 ```bash
-kubectl logs deploy/loja-web --previous
+kubectl logs deploy/loja-web
 ```
 
 ```
@@ -37,7 +37,16 @@ ERRO FATAL: variável de ambiente DATABASE_URL não definida
 Não é possível conectar ao banco. Encerrando.
 ```
 
-`--previous` mostra a saída da execução que **morreu**. Sem ele, você pode pegar o container novo, que ainda não escreveu nada.
+Enquanto o pod espera a próxima tentativa, `kubectl logs` mostra a execução que **morreu**. Se um container novo já tiver subido, use `--previous` para ver a anterior. Se o `--previous` responder `unable to retrieve container logs`, é porque não há outra execução guardada: rode sem ele.
+
+O mesmo motivo aparece em `kubectl describe pod`, no bloco **Last State**, porque a aplicação grava o erro como mensagem de término. Isso ajuda quando os logs da execução anterior já foram descartados:
+
+```
+    Last State:     Terminated
+      Reason:       Error
+      Message:      ERRO FATAL: variável de ambiente DATABASE_URL não definida
+      Exit Code:    1
+```
 
 ## 4. Siga a configuração
 
@@ -75,7 +84,7 @@ kubectl patch configmap loja-config --type merge \
 
 ## 6. Recrie os pods
 
-Os pods em `CrashLoopBackOff` podem levar minutos para tentar de novo, e só leem a variável na subida:
+Se você clicar em **Verificar** agora, a configuração aparece certa, mas a loja continua fora. Os pods em `CrashLoopBackOff` podem levar minutos para tentar de novo, e só leem a variável na subida:
 
 ```bash
 kubectl rollout restart deploy/loja-web

@@ -10,7 +10,7 @@ tags: [kubernetes, kubectl, crashloopbackoff, configmap, logs]
 learning_objectives:
   - Ler o estado dos pods com kubectl get e kubectl describe
   - Entender o que é CrashLoopBackOff e por que apagar o pod não resolve
-  - Ler os logs da execução anterior de um container (kubectl logs --previous)
+  - Ler os logs de um container que morreu (kubectl logs, --previous e Last State)
   - Relacionar a falha a uma mudança de configuração (ConfigMap)
   - Aplicar a correção e recriar os pods com kubectl rollout restart
 
@@ -51,7 +51,7 @@ guided:
   - title: Tente o óbvio
     text: "Apague um dos pods com `kubectl delete pod <nome>`. O Deployment cria outro na hora. Ele sobe?"
   - title: Leia o motivo
-    text: "Use `kubectl logs <pod> --previous` para ver o que o container escreveu antes de morrer. Depois veja os eventos com `kubectl describe pod <pod>`."
+    text: "Use `kubectl logs <pod>` para ver o que o container escreveu antes de morrer (se um container novo já subiu, acrescente `--previous`). Em `kubectl describe pod <pod>`, veja também o bloco **Last State** (com a mensagem de término) e os eventos."
   - title: Siga a configuração
     text: "De onde vêm as variáveis de ambiente do container? Procure `envFrom` em `kubectl get deploy loja-web -o yaml` e compare com `kubectl get configmap loja-config -o yaml`."
   - title: Corrija e recrie os pods
