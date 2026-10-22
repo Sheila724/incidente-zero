@@ -55,7 +55,20 @@ zabbix_get -s 127.0.0.1 -k agent.ping      # 1
 
 Em até 30 segundos, o ícone ZBX fica verde e o incidente do agente aparece como **Resolvido**.
 
-## 5. O que estava escondido
+## 5. Confirme que a coleta voltou por inteiro
+
+Trigger em OK não prova que tudo voltou: ele só diz que o `agent.ping` chegou. Em *Monitoramento → Dados recentes*, filtre `loja-web-01` e confira a coluna **Último valor** e o horário de cada item. Todos devem ter dados do último minuto.
+
+Pelo terminal, a mesma consulta funcional:
+
+```bash
+zbx-api item.get '{"output":["name","lastclock","lastvalue"],"host":"loja-web-01"}' \
+  | jq -r '.[] | "\(.name): \(.lastvalue) (\(now - (.lastclock|tonumber) | floor)s atrás)"'
+```
+
+No gráfico de qualquer item, o período sem dados aparece como um buraco na linha.
+
+## 6. O que estava escondido
 
 Volte em *Monitoramento → Incidentes*:
 
@@ -74,7 +87,7 @@ cat /etc/cron.d/auditoria-export
 
 Um export de auditoria de 190 MB, gravado em `/var/log` por um job de compliance.
 
-## 6. Libere o espaço
+## 7. Libere o espaço
 
 Combine com o dono do export (compliance). No lab, apague ou mova o arquivo:
 

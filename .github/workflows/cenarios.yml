@@ -26,7 +26,7 @@ jobs:
       cenarios: ${{ steps.plano.outputs.cenarios }}
       imagens: ${{ steps.plano.outputs.imagens }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -48,7 +48,7 @@ jobs:
           fi
           echo "cenarios=$(printf '%s\n' "$lista" | jq -R . | jq -sc 'map(select(length > 0))')" >> "$GITHUB_OUTPUT"
           echo "imagens=$imagens" >> "$GITHUB_OUTPUT"
-          echo "Cenários: $(echo $lista)"; echo "Construir imagens: $imagens"
+          echo "::notice title=Plano::cenários: $(echo $lista) | construir imagens: $imagens"
 
   cenario:
     name: ${{ matrix.cenario }}
@@ -61,9 +61,9 @@ jobs:
       matrix:
         cenario: ${{ fromJSON(needs.plano.outputs.cenarios) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -91,3 +91,15 @@ jobs:
         env:
           IZ_RUNTIME: local
         run: ./iz selftest "${{ matrix.cenario }}"
+
+  instalador:
+    name: Instalador da última versão
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # Pega releases quebradas (sem arquivos, checksum errado) antes de quem for instalar
+      - name: Instala pelo comando do README
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/Sheila724/incidente-zero/main/install.sh | IZ_INSTALL_DIR="$HOME/bin" sh
+          "$HOME/bin/iz" version
+          "$HOME/bin/iz" list

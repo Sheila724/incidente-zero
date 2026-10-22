@@ -32,6 +32,16 @@
 | Trigger de tendência, ex.: `trendavg` ou previsão com `timeleft()` | Detecção |
 | Dashboard de memória por versão após cada deploy | Detecção |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| O gráfico do Zabbix com uma rampa contínua desde o horário do deploy e o `/health` mostrando as sessões crescendo | Evidência |
+| `SESSION_CACHE_MAX=0` (sem limite) no arquivo de ambiente da 2.5.0 | Evidência da causa |
+| A memória cair depois do `restart` da loja | Coincidência: a rampa recomeça no mesmo ritmo |
+
 ## Para o seu postmortem
 
 Reiniciar é uma ótima mitigação e uma péssima correção. Se depois do restart o gráfico volta a desenhar a mesma rampa, o problema ainda está lá. E um incidente sem registro no Zabbix obriga o próximo plantão a descobrir tudo de novo.

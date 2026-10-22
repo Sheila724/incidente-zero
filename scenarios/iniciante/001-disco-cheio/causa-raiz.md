@@ -33,6 +33,16 @@
 | Registrar mudanças temporárias em ticket, com prazo para reverter | Processo |
 | Fazer a aplicação continuar atendendo mesmo sem conseguir logar | Resiliência |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `journalctl -u app` com `[Errno 28] No space left on device`, `df` em 100% e `debug.log` ocupando a partição | Evidência |
+| `LOG_LEVEL=DEBUG` no arquivo **e** no `/health` da aplicação em execução | Evidência |
+| O site voltar depois do `truncate` | Coincidência: só libera espaço; com DEBUG ligado, o disco enche de novo |
+
 ## Para o seu postmortem
 
 Um bom postmortem é **sem culpados**: o foco é o sistema e o processo, não quem esqueceu de reverter. Pergunte "o que tornou esse erro fácil de cometer e difícil de perceber?".

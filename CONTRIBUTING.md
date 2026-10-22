@@ -4,7 +4,7 @@ Obrigada pelo interesse! A forma mais valiosa de contribuir é **criar um cenár
 
 ## 1. Prepare o ambiente
 
-Você precisa de Linux (ou WSL2) com Docker, Go 1.22+ e Node 20.19+.
+Você precisa de Linux (ou WSL2) com Docker, Go 1.21+ (ele baixa sozinho a versão definida no `go.mod`) e Node 20.19+.
 
 ```bash
 git clone https://github.com/Sheila724/incidente-zero.git

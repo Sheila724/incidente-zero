@@ -34,6 +34,16 @@
 | Importações pesadas em tabela fora do binlog (`SET sql_log_bin = 0` quando aplicável) ou em outro servidor | Prevenção |
 | Runbook "disco cheio no banco": liberar espaço no sistema de arquivos antes de qualquer comando SQL | Processo |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| Log do MariaDB com `Disk is full writing ... Waiting for someone to free space` e consultas presas nesse estado | Evidência |
+| Os `mysql-bin.*` somando a maior parte da partição, com expiração desligada | Evidência da causa |
+| O banco voltar depois de mover os binlogs | Mitigação: sem `PURGE` e expiração, o índice fica inconsistente e o disco enche de novo |
+
 ## Para o seu postmortem
 
 O instinto num banco travado é reiniciar. Aqui, isso podia transformar um incidente de gravação em um banco corrompido. Antes de agir, entenda **o que o servidor está esperando**: o log dizia, com todas as letras, *"Waiting for someone to free space"*.

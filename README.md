@@ -34,7 +34,7 @@ Prefere baixar na mão? Os binários de cada versão ficam em [Releases](https:/
 
 ### Compilando do código
 
-Para contribuir ou testar mudanças, compile a partir do repositório (precisa de Go 1.22+ e Node 20.19+):
+Para contribuir ou testar mudanças, compile a partir do repositório (precisa de Go 1.21+, que baixa sozinho a versão definida no `go.mod`, e Node 20.19+):
 
 ```bash
 git clone https://github.com/Sheila724/incidente-zero.git

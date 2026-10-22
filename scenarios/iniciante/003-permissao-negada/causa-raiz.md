@@ -33,6 +33,16 @@
 | Smoke test (`curl`) ao fim de scripts que mexem em arquivos servidos | Detecção |
 | Documentar tarefas agendadas no runbook do servidor | Processo |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `error.log` com `(13: Permission denied)` e `namei -l` mostrando `/var/www/loja` sem acesso para o `www-data` | Evidência |
+| O timer `hardening-web` rodando a cada 2 minutos e o script com `chmod -R o-rwx` | Evidência da recorrência |
+| O site voltar depois do `chmod o+rX` | Coincidência: dura até a próxima execução do timer |
+
 ## Para o seu postmortem
 
 Segurança e disponibilidade não são opostos: o requisito da auditoria era legítimo e a solução final atende os dois. O aprendizado é **envolver quem opera o serviço** ao desenhar controles de segurança.

@@ -33,6 +33,16 @@
 | Alertar quando um timer crítico estiver desativado | Detecção |
 | Avaliar sessões em Redis ou no banco, com expiração automática | Arquitetura |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `df -h` com espaço livre e `df -i` em 100% | Evidência |
+| Milhares de sessões antigas e o timer `limpa-sessoes` desativado | Evidência da causa |
+| A loja voltar depois de apagar as sessões | Coincidência: sem o timer, os inodes acabam de novo |
+
 ## Para o seu postmortem
 
 Quando o sintoma é igual ao de um incidente anterior, a tentação é aplicar a mesma solução. Confira as hipóteses antes: aqui, `df -h` sozinho dizia que estava tudo bem.

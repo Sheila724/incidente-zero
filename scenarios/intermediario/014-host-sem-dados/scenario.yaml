@@ -65,8 +65,11 @@ guided:
   - title: Corrija a configuração do agente
     text: "Em /etc/zabbix/zabbix_agent2.conf, `Server=` e `ServerActive=` precisam apontar para o Zabbix Server deste ambiente (127.0.0.1). Reinicie o agente."
     verify: "[ \"$(zabbix_get -s 127.0.0.1 -k agent.ping 2>/dev/null)\" = 1 ]"
-  - title: Veja o que estava escondido
-    text: "Com os dados voltando, volte em *Monitoramento → Incidentes*. Apareceu algo novo?"
+  - title: Confirme que a coleta voltou por inteiro
+    text: "Trigger em OK não prova que tudo voltou. Em *Monitoramento → Dados recentes*, filtre loja-web-01: todos os itens têm um valor do último minuto? No gráfico, dá para ver o buraco do período sem dados."
+    verify: "h=$(zbx-api host.get '{\"filter\":{\"host\":[\"loja-web-01\"]},\"output\":[\"hostid\"]}' | jq -r '.[0].hostid'); [ \"$(zbx-api item.get \"{\\\"hostids\\\":\\\"$h\\\",\\\"output\\\":[\\\"lastclock\\\"]}\" | jq --argjson t $(($(date +%s)-60)) '[.[] | select((.lastclock|tonumber) <= $t)] | length')\" = 0 ]"
+  - title: Revise o que aconteceu durante a lacuna
+    text: "Com os dados voltando, volte em *Monitoramento → Incidentes*. Apareceu algo novo? Pergunte sempre: o que deixou de ser visto enquanto o host estava sem dados?"
   - title: Resolva o problema escondido
     text: "Descubra o que encheu /var/log e libere o espaço. O incidente deve ficar como *Resolvido* no Zabbix."
     verify: "[ $(df --output=pcent /var/log | tail -1 | tr -dc '0-9') -le 90 ]"

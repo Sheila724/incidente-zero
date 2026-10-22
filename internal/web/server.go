@@ -199,6 +199,9 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 			hints += rec.LastHints
 			points += rec.BestPoints
 			maxPoints += base
+			if sc.Scoring.TimeBonusMinutes > 0 {
+				maxPoints += 10 // bônus de tempo
+			}
 		} else if next == "" {
 			next = sc.ID
 		}

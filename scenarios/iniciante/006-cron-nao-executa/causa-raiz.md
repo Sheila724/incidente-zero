@@ -32,6 +32,16 @@
 | Alerta de "backup não rodou" em minutos, não em dias (heartbeat) | Detecção |
 | Teste de restauração periódico | Validação |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `journalctl -u cron` sem nenhuma execução do backup | Evidência de que o cron nunca rodou o job |
+| O nome `backup-loja.cron` (com ponto, ignorado pelo cron) e o `%` sem escape na linha | Evidência da causa |
+| O backup funcionar ao rodar o script na mão | Coincidência: prova que o script está bom, não que o agendamento funciona |
+
 ## Para o seu postmortem
 
 Falhas silenciosas são as mais caras: tudo parecia normal por três dias. Pergunte-se sempre: **se isso parar de funcionar, quem fica sabendo, e em quanto tempo?**

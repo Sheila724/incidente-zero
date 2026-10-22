@@ -34,6 +34,16 @@
 | Checklist de migração: `systemctl list-unit-files --state=enabled` antes e depois | Processo |
 | Teste periódico da renovação em homologação (`--force`) | Prevenção |
 
+## Evidência × coincidência
+
+Num postmortem, separe o que **confirmou** a causa do que só aconteceu junto com a recuperação. É isso que impede que um reinício seja tratado como diagnóstico.
+
+| O que foi observado | Peso |
+|---|---|
+| `openssl s_client` mostrando o `notAfter` de ontem no certificado servido | Evidência |
+| O timer `renova-certificado` desabilitado e o script sem `reload` do nginx | Evidência da causa |
+| O arquivo novo em `/etc/ssl/loja/` com datas válidas | Coincidência: o nginx continua entregando o certificado antigo até o `reload` |
+
 ## Para o seu postmortem
 
 Certificado vencido é um dos incidentes mais evitáveis que existem, e mesmo assim derruba empresas grandes todo ano. A falha quase nunca é "esqueceram de renovar": é a automação que parou em silêncio. Monitore a **data de validade do que está sendo servido**, não só se o site responde.
