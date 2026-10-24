@@ -202,7 +202,10 @@
     </section>
 
     <section class="panel history">
-      <div class="sec-head"><h2>Histórico de plantões</h2></div>
+      <div class="sec-head">
+        <h2>Últimos incidentes resolvidos</h2>
+        {#if data.history?.length > 5}<a class="mono ver-tudo" href="#/historico">Ver histórico completo ({data.history.length})</a>{/if}
+      </div>
       {#if data.history?.length}
         <div class="table-wrap">
           <table>
@@ -213,7 +216,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each data.history as h (h.id)}
+              {#each data.history.slice(0, 5) as h (h.id)}
                 {@const sv = sev(h.severity)}
                 <tr>
                   <td><a href={`#/lab/${h.id}`}><span class="mono faint">#{h.number}</span> {h.title}</a></td>
@@ -339,6 +342,8 @@
     main { padding: 24px 16px 40px; }
     .hero h1 { font-size: 28px; }
   }
+  .ver-tudo { font-size: 13px; color: var(--accent); text-decoration: none; }
+  .ver-tudo:hover { text-decoration: underline; }
   .pm-link { font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; color: var(--accent); }
   .pm-link:hover { text-decoration: underline; }
   .pm-link.pend { color: var(--violet); }
