@@ -62,6 +62,7 @@ type Incidente struct {
 	ResolvidoEm   *time.Time `json:"resolvidoEm,omitempty"`
 	Escalado      bool       `json:"escalado"`
 	Dicas         int        `json:"dicas"`
+	SolucaoVista  bool       `json:"solucaoVista,omitempty"`
 	Pontos        int        `json:"pontos"`
 	Erro          string     `json:"erro,omitempty"`
 }
@@ -435,7 +436,7 @@ func (p *Plantao) Reconhecer() (*Incidente, error) {
 
 // Resolver registra a resolução do incidente atual, se for este cenário.
 // pontos é a pontuação da tentativa; a penalidade de escalonamento é aplicada aqui.
-func (p *Plantao) Resolver(id string, pontos, dicas int) (bool, error) {
+func (p *Plantao) Resolver(id string, pontos, dicas int, solucaoVista bool) (bool, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	t := p.est.Atual
@@ -450,6 +451,7 @@ func (p *Plantao) Resolver(id string, pontos, dicas int) (bool, error) {
 	i.Status = Resolvido
 	i.ResolvidoEm = &agora
 	i.Dicas = dicas
+	i.SolucaoVista = solucaoVista
 	if i.Escalado {
 		pontos -= PenalidadeEscalado
 	}

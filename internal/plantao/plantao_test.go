@@ -88,12 +88,12 @@ func TestCicloCompleto(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.passar(10 * time.Minute)
-	ok, err := p.Resolver(id, 90, 1)
+	ok, err := p.Resolver(id, 90, 1, false)
 	if err != nil || !ok {
 		t.Fatalf("resolver: %v %v", ok, err)
 	}
 	// Resolver outro cenário não mexe em nada
-	if ok, _ := p.Resolver("002-nginx-nao-sobe", 100, 0); ok {
+	if ok, _ := p.Resolver("002-nginx-nao-sobe", 100, 0, false); ok {
 		t.Fatal("resolveu cenário que não é do plantão")
 	}
 
@@ -125,7 +125,7 @@ func TestEscalonamento(t *testing.T) {
 	if a, _ := p.Tick(); a.Escalou != "" {
 		t.Fatal("escalou duas vezes")
 	}
-	_, _ = p.Resolver("004-cpu-100", 100, 0)
+	_, _ = p.Resolver("004-cpu-100", 100, 0, false)
 	i := p.Atual().Incidentes[0]
 	if !i.Escalado || i.Pontos != 100-PenalidadeEscalado {
 		t.Errorf("penalidade não aplicada: %+v", i)
@@ -145,7 +145,7 @@ func TestFimDoTurno(t *testing.T) {
 	if a, _ := p.Tick(); a.Encerrado || a.Disparar {
 		t.Fatalf("encerrou no meio do incidente: %+v", a)
 	}
-	ok, _ := p.Resolver("004-cpu-100", 80, 0)
+	ok, _ := p.Resolver("004-cpu-100", 80, 0, false)
 	if !ok {
 		t.Fatal("não resolveu na passagem")
 	}
@@ -192,7 +192,7 @@ func TestSorteioEvitaRepetir(t *testing.T) {
 		vistos[id] = true
 		_ = p.Preparando(id)
 		_ = p.Alertar(id)
-		_, _ = p.Resolver(id, 100, 0)
+		_, _ = p.Resolver(id, 100, 0, false)
 	}
 }
 

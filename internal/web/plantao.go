@@ -116,6 +116,8 @@ type incidenteDTO struct {
 	AlertTitle string `json:"alertTitle"`
 	Severity   string `json:"severity"`
 	Level      string `json:"level"`
+	// Para estudar: só nos incidentes encerrados em que a pessoa travou
+	Estudo *estudoDTO `json:"estudo,omitempty"`
 }
 
 type turnoDTO struct {
@@ -134,6 +136,7 @@ func (s *Server) incidenteDTO(i plantao.Incidente) incidenteDTO {
 	d := incidenteDTO{Incidente: i, Number: number(i.ID)}
 	if sc, err := scenario.Find(s.ScenariosDir, i.ID); err == nil {
 		d.Title, d.AlertTitle, d.Severity, d.Level = sc.Title, sc.Alert.Title, sc.Alert.Severity, sc.Level
+		d.Estudo = estudoDe(i, sc)
 	}
 	return d
 }
