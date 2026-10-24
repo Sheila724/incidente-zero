@@ -50,6 +50,28 @@
   function seg(a, b) {
     return a && b ? (new Date(b) - new Date(a)) / 1000 : null;
   }
+  // Cursos e livros gratuitos por trilha, para quem travou
+  const CURSOS = {
+    iniciante: [
+      { titulo: 'Introduction to Linux (LFS101)', url: 'https://training.linuxfoundation.org/training/introduction-to-linux/', desc: 'Curso gratuito da Linux Foundation (em inglês)' }
+    ],
+    intermediario: [
+      { titulo: 'Webinars gratuitos do Zabbix', url: 'https://www.zabbix.com/webinars', desc: 'Vídeos oficiais sobre monitoramento com Zabbix' }
+    ],
+    avancado: [
+      { titulo: 'Descomplicando o Kubernetes', url: 'https://github.com/badtuxx/DescomplicandoKubernetes', desc: 'Livro gratuito da LINUXtips, em português' },
+      { titulo: 'Introduction to Kubernetes (LFS158)', url: 'https://training.linuxfoundation.org/training/introduction-to-kubernetes/', desc: 'Curso gratuito da Linux Foundation (em inglês)' },
+      { titulo: 'Kubernetes Basics', url: 'https://kubernetes.io/docs/tutorials/kubernetes-basics/', desc: 'Tutorial interativo da documentação oficial' }
+    ],
+    todos: [
+      { titulo: 'Livros de SRE do Google', url: 'https://sre.google/books/', desc: 'Site Reliability Engineering e The Site Reliability Workbook, gratuitos online (em inglês)' }
+    ]
+  };
+  function cursosPara(lista) {
+    const niveis = [...new Set(lista.map((i) => i.level).filter(Boolean))];
+    return [...niveis.flatMap((n) => CURSOS[n] ?? []), ...CURSOS.todos];
+  }
+
   const NOME_STATUS = {
     alertando: 'Alertando', reconhecido: 'Em atendimento', resolvido: 'Resolvido',
     'nao-resolvido': 'Não resolvido'
@@ -290,7 +312,46 @@
   {@const lista = t.incidentes.filter((i) => i.alertaEm)}
   {#if lista.length}
     {@render tabela(lista, 'Incidentes do turno')}
+    {@render estudar(lista.filter((i) => i.estudo))}
   {/if}
+{/snippet}
+
+{#snippet estudar(travou)}
+  <section class="panel estudo">
+    <h2>Para estudar</h2>
+    {#if !travou.length}
+      <p class="muted">Você não travou em nenhum incidente deste turno: sem dicas, sem solução aberta e dentro do tempo estimado.</p>
+    {:else}
+      <p class="muted">Os incidentes em que você teve mais dificuldade, com material para revisar. Refazer no modo guiado também ajuda a fixar o caminho.</p>
+      {#each travou as i (i.id + i.criadoEm)}
+        {@const sv = sev(i.severity)}
+        <article class="est-item">
+          <div class="est-head">
+            <strong><span class="sevdot" style:background={sv.color}></span>#{i.number} {i.title}</strong>
+            <a class="btn btn-ghost refazer" href={`#/lab/${i.id}`}>Refazer no modo guiado</a>
+          </div>
+          <div class="motivos">
+            {#each i.estudo.motivos as m (m)}<span class="motivo">{m}</span>{/each}
+          </div>
+          {#if i.estudo.links.length}
+            <ul class="links">
+              {#each i.estudo.links as l (l.url)}
+                <li><a href={l.url} target="_blank" rel="noopener noreferrer">{l.titulo}</a>{#if l.desc}<span class="faint">&nbsp;· {l.desc}</span>{/if}</li>
+              {/each}
+            </ul>
+          {/if}
+        </article>
+      {/each}
+      <div class="cursos">
+        <h3>Cursos e livros gratuitos</h3>
+        <ul class="links">
+          {#each cursosPara(travou) as c (c.url)}
+            <li><a href={c.url} target="_blank" rel="noopener noreferrer">{c.titulo}</a><span class="faint">&nbsp;· {c.desc}</span></li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+  </section>
 {/snippet}
 
 {#snippet tabela(lista, titulo)}
@@ -383,6 +444,16 @@
   .sit.ok { background: var(--green-soft); color: var(--green); }
   .sit.ruim { background: var(--red-soft); color: #F9A9AD; }
 
+  .estudo { padding: 22px; border-radius: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .estudo > p { margin: 0; }
+  .est-item { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+  .est-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .refazer { margin-left: auto; min-height: 36px; font-size: 14px; }
+  .motivos { display: flex; flex-wrap: wrap; gap: 6px; }
+  .motivo { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--violet-soft); color: #CFC2F5; border: 1px solid var(--violet-line); }
+  .links { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+  .links a { color: var(--blue); }
+  .cursos h3 { font-size: 15px; margin: 4px 0 8px; }
   @keyframes vivo { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
   @media (prefers-reduced-motion: reduce) { .dot, .radar::after { animation: none; } }
   @media (max-width: 640px) {

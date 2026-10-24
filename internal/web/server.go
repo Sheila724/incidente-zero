@@ -453,7 +453,7 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 				"points": pts, "solutionViewed": before.SolutionViewed,
 			}
 			if s.Plantao != nil {
-				if ok, err := s.Plantao.Resolver(sc.ID, pts, rec.LastHints); err != nil {
+				if ok, err := s.Plantao.Resolver(sc.ID, pts, rec.LastHints, before.SolutionViewed); err != nil {
 					log.Printf("plantão: %v", err)
 				} else if ok {
 					resp["plantao"] = true

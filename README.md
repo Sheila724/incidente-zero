@@ -86,6 +86,7 @@ Em **Plantão**, no topo da interface, você assume um turno (30 min, 1 h, 2 h o
 - **Escalonamento:** sem reconhecimento em 5 minutos, o incidente é escalado e perde 20 pontos.
 - **Sem modo guiado:** o lab abre como num plantão real; as dicas continuam disponíveis, com custo.
 - **Relatório do turno:** incidentes atendidos, MTTA (tempo até reconhecer), MTTR, escalonamentos e pontos.
+- **Para estudar:** nos incidentes em que você travou (dicas, solução aberta, escalonamento, tempo acima do estimado ou sem resolver), o relatório traz as referências do cenário, o atalho para refazer no modo guiado e cursos e livros gratuitos da trilha.
 
 Deixe a aba aberta durante o turno. Se o turno acabar com você trabalhando num incidente reconhecido, dá para terminar o que começou.
 
