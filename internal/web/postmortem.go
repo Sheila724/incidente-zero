@@ -17,7 +17,8 @@ func (s *Server) postmortemGet(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeJSON(w, http.StatusOK, s.postmortemDTO(sc, s.Store.Get(sc.ID), fuso(r)))
+	c := contaReq(r)
+	writeJSON(w, http.StatusOK, s.postmortemDTO(c, sc, c.Store.Get(sc.ID), fuso(r)))
 }
 
 // postmortemSave guarda o postmortem.
@@ -26,7 +27,8 @@ func (s *Server) postmortemSave(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !s.Store.Get(sc.ID).Resolved {
+	c := contaReq(r)
+	if !c.Store.Get(sc.ID).Resolved {
 		writeErr(w, http.StatusConflict, "resolva o incidente antes de escrever o postmortem")
 		return
 	}
@@ -38,12 +40,12 @@ func (s *Server) postmortemSave(w http.ResponseWriter, r *http.Request) {
 	for _, f := range []*string{&pm.Resumo, &pm.Causa, &pm.Evidencia, &pm.Coincidencia, &pm.Acoes} {
 		*f = strings.TrimSpace(*f)
 	}
-	rec, err := s.Store.SavePostmortem(sc.ID, pm)
+	rec, err := c.Store.SavePostmortem(sc.ID, pm)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, s.postmortemDTO(sc, rec, fuso(r)))
+	writeJSON(w, http.StatusOK, s.postmortemDTO(c, sc, rec, fuso(r)))
 }
 
 // postmortemMarkdown baixa o postmortem em Markdown.
@@ -52,7 +54,7 @@ func (s *Server) postmortemMarkdown(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	md := PostmortemMarkdown(sc, s.Store.Get(sc.ID), fuso(r))
+	md := PostmortemMarkdown(sc, contaReq(r).Store.Get(sc.ID), fuso(r))
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="postmortem-%s.md"`, sc.ID))
 	_, _ = w.Write([]byte(md))
@@ -68,7 +70,7 @@ func fuso(r *http.Request) *time.Location {
 	return time.Local
 }
 
-func (s *Server) postmortemDTO(sc *scenario.Scenario, rec progress.Record, loc *time.Location) map[string]any {
+func (s *Server) postmortemDTO(c *conta, sc *scenario.Scenario, rec progress.Record, loc *time.Location) map[string]any {
 	pm := rec.Postmortem
 	if pm == nil {
 		pm = &progress.Postmortem{}
@@ -83,7 +85,7 @@ func (s *Server) postmortemDTO(sc *scenario.Scenario, rec progress.Record, loc *
 		tl = []progress.Event{}
 	}
 	return map[string]any{
-		"scenario":   s.summarize(sc, runningSet()),
+		"scenario":   s.summarize(c, sc, runningSet(c.Nome)),
 		"hostname":   sc.Hostname,
 		"resolved":   rec.Resolved,
 		"resolvedAt": resolvedAt,

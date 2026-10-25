@@ -25,7 +25,7 @@ kubectl -n loja delete pod -l app=loja-web --wait=false >/dev/null
 # Autoverificação: pods reiniciando e a loja fora do ar
 for _ in $(seq 1 60); do
   r=$(kubectl -n loja get pods -l app=loja-web -o jsonpath='{range .items[*]}{.status.containerStatuses[0].restartCount}{"\n"}{end}' 2>/dev/null | sort -n | head -1)
-  code=$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost/)
+  code=$(curl -s -o /dev/null -m 6 -w '%{http_code}' http://localhost/ || true)
   [ "${r:-0}" -ge 1 ] && [ "$code" = "502" ] && exit 0
   sleep 2
 done

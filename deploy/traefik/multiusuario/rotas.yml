@@ -1,0 +1,27 @@
+# Rotas do Traefik para a demo multiusuário do Incidente Zero.
+#
+# Vai para deploy/traefik/conf/, junto com o usuarios.yml que o
+# `iz usuarios` gera. O middleware iz-auth (logins) fica no usuarios.yml,
+# e o Traefik relê a pasta sozinho: criar ou remover logins não exige restart.
+# Troque o domínio abaixo.
+http:
+  routers:
+    incidente-zero:
+      rule: Host(`iz.SEU-DOMINIO`)
+      entryPoints: [websecure]
+      middlewares: [iz-auth, iz-headers]
+      service: incidente-zero
+      tls:
+        certResolver: le
+
+  middlewares:
+    iz-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+
+  services:
+    incidente-zero:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:8080

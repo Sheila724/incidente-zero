@@ -136,6 +136,39 @@ docker compose up -d
 
 O domínio precisa apontar para o servidor. Sem domínio próprio, use o [sslip.io](https://sslip.io): `iz.203-0-113-10.sslip.io` resolve para `203.0.113.10`.
 
+### Demo com várias pessoas
+
+Por padrão, o `iz ui` é para uma pessoa: um progresso, um plantão e um lab por vez. Com `--multiusuario`, cada login do Traefik ganha o seu próprio progresso, plantão, postmortems e lab, e um não derruba o lab do outro.
+
+1. Na pasta do Traefik, troque o arquivo único pela pasta `conf/`, que o Traefik relê sozinho:
+
+   ```bash
+   cd deploy/traefik
+   mkdir -p conf
+   cp multiusuario/rotas.yml conf/rotas.yml   # e troque o domínio
+   ```
+
+   No `docker-compose.yml`, troque `--providers.file.filename=/etc/traefik/dynamic.yml` por `--providers.file.directory=/etc/traefik/conf` e o volume `./dynamic.yml:/etc/traefik/dynamic.yml:ro` por `./conf:/etc/traefik/conf:ro`. Depois, `docker compose up -d`.
+
+2. Crie os logins. A senha é gerada se você não informar:
+
+   ```bash
+   iz usuarios add ana
+   iz usuarios add recrutadora-acme
+   iz usuarios list
+   iz usuarios rm ana
+   ```
+
+3. Rode a interface no modo multiusuário, com um limite de memória para os labs:
+
+   ```bash
+   iz ui --multiusuario --labs-memoria 6g --lab-idle 30m
+   ```
+
+   Quando os labs em execução somam o limite, quem tenta abrir mais um vê *"servidor cheio, tente em alguns minutos"*, em vez de travar o servidor para todos. Os labs simples usam 256 MB, e os de Zabbix e Kubernetes, até 2 GB.
+
+O progresso de cada pessoa fica em `~/.config/incidente-zero/usuarios/<nome>/`. O `iz ui` só confia no cabeçalho com o usuário porque escuta em `127.0.0.1`, atrás do Traefik.
+
 ## Pelo terminal
 
 Tudo também funciona sem a interface:
@@ -218,6 +251,7 @@ iz stop         # destrói o lab
 - [ ] Variações nos cenários (nomes, portas e serviços diferentes a cada execução)
 - [x] **Modo Plantão:** turno com incidentes sorteados, alerta com som e notificação, reconhecimento, escalonamento e relatório do turno
 - [ ] Modo Plantão: escala semanal e alertas no celular
+- [x] Demo multiusuário: login por pessoa, progresso e labs separados, limite de memória
 
 ## Arquitetura
 

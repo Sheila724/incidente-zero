@@ -170,7 +170,7 @@
       tab = detail.guided?.length ? 'guiado' : 'briefing';
       phase = 'lab';
     } catch (e) {
-      startError = { message: e.message, output: e.body?.output };
+      startError = { message: e.message, output: e.body?.output, cheio: !!e.body?.cheio };
       phase = 'briefing';
     } finally {
       clearInterval(tick);
@@ -336,12 +336,12 @@
           <button type="button" class="btn btn-primary wide" onclick={start}>
             {sc.resolved ? 'Refazer este plantão' : 'Assumir o plantão'}
           </button>
-          <p class="faint small">O cronômetro começa quando o lab fica pronto. Outros labs em execução são encerrados.</p>
+          <p class="faint small">O cronômetro começa quando o lab fica pronto. Se você tiver outro lab aberto, ele é encerrado.</p>
         {/if}
 
         {#if startError}
           <div class="start-err" role="alert">
-            <strong>Não deu para subir o lab.</strong>
+            <strong>{startError.cheio ? 'Servidor cheio no momento.' : 'Não deu para subir o lab.'}</strong>
             <span>{startError.message}</span>
             {#if startError.output}<pre>{startError.output}</pre>{/if}
           </div>

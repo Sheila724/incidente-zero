@@ -13,7 +13,10 @@ import (
 	"github.com/Sheila724/incidente-zero/internal/scenario"
 )
 
-const label = "incidente-zero.scenario"
+const (
+	label        = "incidente-zero.scenario"
+	labelUsuario = "incidente-zero.usuario"
+)
 
 // Runtime decide como o container roda:
 //   - "sysbox": runtime sysbox-runc (isolamento forte, só Linux)
@@ -39,6 +42,9 @@ func Start(s *scenario.Scenario) error {
 	_ = docker("rm", "-f", name).Run()
 
 	args := []string{"run", "-d", "--name", name, "--label", label + "=" + s.ID}
+	if s.Usuario != "" {
+		args = append(args, "--label", labelUsuario+"="+s.Usuario)
+	}
 	if s.Hostname != "" {
 		args = append(args, "--hostname", s.Hostname)
 	}
@@ -154,21 +160,47 @@ func Stop(s *scenario.Scenario) error {
 	return nil
 }
 
-// Running devolve os IDs dos cenários com lab em execução.
-func Running() ([]string, error) {
+// Lab é um lab em execução.
+type Lab struct {
+	Usuario string // vazio no uso local
+	ID      string // cenário
+}
+
+// RunningAll devolve todos os labs em execução, de todos os usuários.
+func RunningAll() ([]Lab, error) {
 	out, err := docker("ps", "--filter", "label="+label,
-		"--format", `{{.Label "`+label+`"}}`).Output()
+		"--format", `{{.Label "`+label+`"}};{{.Label "`+labelUsuario+`"}}`).Output()
+	if err != nil {
+		return nil, err
+	}
+	var labs []Lab
+	for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		id, usuario, _ := strings.Cut(l, ";")
+		if id != "" {
+			labs = append(labs, Lab{Usuario: usuario, ID: id})
+		}
+	}
+	return labs, nil
+}
+
+// RunningFor devolve os IDs dos cenários com lab em execução de um usuário
+// ("" para o uso local).
+func RunningFor(usuario string) ([]string, error) {
+	all, err := RunningAll()
 	if err != nil {
 		return nil, err
 	}
 	var ids []string
-	for _, l := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		if l != "" {
-			ids = append(ids, l)
+	for _, l := range all {
+		if l.Usuario == usuario {
+			ids = append(ids, l.ID)
 		}
 	}
 	return ids, nil
 }
+
+// Running devolve os IDs dos cenários com lab em execução no uso local.
+func Running() ([]string, error) { return RunningFor("") }
 
 // Build constrói a imagem base dos labs.
 func Build(contextDir, tag string) error {

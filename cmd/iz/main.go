@@ -22,6 +22,7 @@ import (
 	"github.com/Sheila724/incidente-zero/internal/plantao"
 	"github.com/Sheila724/incidente-zero/internal/progress"
 	"github.com/Sheila724/incidente-zero/internal/scenario"
+	"github.com/Sheila724/incidente-zero/internal/usuarios"
 	"github.com/Sheila724/incidente-zero/internal/web"
 	webui "github.com/Sheila724/incidente-zero/web"
 )
@@ -33,6 +34,7 @@ const usage = `Incidente Zero — aprenda a resolver incidentes antes do seu pri
 
 Uso:
   iz ui [--addr host:porta] abre a interface web (padrão 127.0.0.1:8080)
+  iz usuarios              gerencia os logins da demo multiusuário (veja iz usuarios help)
   iz list                  lista os cenários disponíveis
   iz pull                  baixa a imagem base pronta (recomendado)
   iz build                 constrói a imagem base localmente
@@ -137,6 +139,8 @@ func run(args []string) error {
 	switch cmd {
 	case "ui":
 		return cmdUI(rest)
+	case "usuarios", "usuario", "users":
+		return cmdUsuarios(rest)
 	case "list", "ls":
 		return cmdList()
 	case "build":
@@ -404,6 +408,9 @@ func cmdUI(args []string) error {
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 	addr := fs.String("addr", "127.0.0.1:8080", "endereço de escuta (use 0.0.0.0:8080 atrás de um proxy com autenticação)")
 	idle := fs.Duration("lab-idle", 0, "remove labs sem atividade na interface por esse tempo, ex.: 30m (0 desliga)")
+	multi := fs.Bool("multiusuario", false, "um progresso, um plantão e um lab por pessoa; o usuário vem do proxy autenticado (cabeçalho "+usuarios.Cabecalho+")")
+	cabecalho := fs.String("usuario-header", "", "cabeçalho com o nome do usuário (padrão com --multiusuario: "+usuarios.Cabecalho+")")
+	memoria := fs.String("labs-memoria", "", "limite de memória somada dos labs em execução, ex.: 6g (padrão: sem limite)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -415,12 +422,28 @@ func cmdUI(args []string) error {
 	if err != nil {
 		return fmt.Errorf("plantão: %w", err)
 	}
+	limite, err := web.ParseMemoria(*memoria)
+	if err != nil {
+		return err
+	}
+	if *multi && *cabecalho == "" {
+		*cabecalho = usuarios.Cabecalho
+	}
 	srv := &web.Server{
-		ScenariosDir: scenariosDir(),
-		Store:        store,
-		Static:       webui.FS(),
-		Version:      version,
-		Plantao:      turnos,
+		ScenariosDir:  scenariosDir(),
+		Store:         store,
+		Static:        webui.FS(),
+		Version:       version,
+		Plantao:       turnos,
+		UsuarioHeader: *cabecalho,
+		DataDir:       filepath.Dir(progress.DefaultPath()),
+		LabsMemoria:   limite,
+	}
+	if srv.UsuarioHeader != "" {
+		fmt.Printf("Modo multiusuário: o usuário vem do cabeçalho %s (o proxy precisa autenticar).\n", srv.UsuarioHeader)
+	}
+	if limite > 0 {
+		fmt.Printf("Limite de memória dos labs: %s.\n", *memoria)
 	}
 	go srv.AgendarPlantao(context.Background())
 	fmt.Printf("Incidente Zero rodando em http://%s  (Ctrl+C para sair)\n", *addr)
