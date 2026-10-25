@@ -18,7 +18,7 @@ kubectl -n loja create job --from=cronjob/economia-homologacao "economia-homolog
 for _ in $(seq 1 75); do
   db=$(kubectl -n loja get deploy loja-db -o jsonpath='{.spec.replicas}' 2>/dev/null)
   prontos=$(kubectl -n loja get deploy loja-web -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
-  code=$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost/)
+  code=$(curl -s -o /dev/null -m 6 -w '%{http_code}' http://localhost/ || true)
   if [ "$db" = "0" ] && [ "${prontos:-0}" = "0" ] && [ "$code" = "502" ]; then
     exit 0
   fi

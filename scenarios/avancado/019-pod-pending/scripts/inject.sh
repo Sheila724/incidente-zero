@@ -69,7 +69,7 @@ YAML
 for _ in $(seq 1 60); do
   pendentes=$(kubectl -n loja get pods -l app=loja-checkout --field-selector=status.phase=Pending -o name 2>/dev/null | wc -l)
   evento=$(kubectl -n loja get events --field-selector reason=FailedScheduling -o jsonpath='{.items[*].message}' 2>/dev/null)
-  code=$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost/checkout/)
+  code=$(curl -s -o /dev/null -m 6 -w '%{http_code}' http://localhost/checkout/ || true)
   if [ "$pendentes" -ge 2 ] && grep -q 'Insufficient cpu' <<< "$evento" && [ "$code" = "502" ]; then
     exit 0
   fi

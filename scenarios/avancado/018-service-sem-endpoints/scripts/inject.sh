@@ -16,7 +16,7 @@ for _ in $(seq 1 60); do
   rodando=$(kubectl -n loja get pods -l app=loja-web --field-selector=status.phase=Running -o name 2>/dev/null | wc -l)
   prontos=$(kubectl -n loja get deploy loja-web -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
   falhas=$(kubectl -n loja get events --field-selector reason=Unhealthy -o name 2>/dev/null | wc -l)
-  code=$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://localhost/)
+  code=$(curl -s -o /dev/null -m 6 -w '%{http_code}' http://localhost/ || true)
   if [ "$rodando" -ge 2 ] && [ "${prontos:-0}" = "0" ] && [ "$falhas" -ge 1 ] && [ "$code" = "502" ]; then
     exit 0
   fi
