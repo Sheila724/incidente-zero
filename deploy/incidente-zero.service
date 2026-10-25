@@ -8,6 +8,7 @@ Requires=docker.service
 
 [Service]
 # --lab-idle remove labs esquecidos (sem a página do lab aberta) depois de 30 min
+# Demo com várias pessoas (veja o README): acrescente --multiusuario --labs-memoria 6g
 ExecStart=/usr/local/bin/iz ui --lab-idle 30m
 Environment=HOME=/root
 WorkingDirectory=/root

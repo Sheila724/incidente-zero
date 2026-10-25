@@ -28,6 +28,16 @@ type Server struct {
 	Version      string
 	Plantao      *plantao.Plantao // Modo Plantão (nil desliga)
 
+	// Multiusuário (opcional): cabeçalho com o nome do usuário, preenchido pelo
+	// proxy autenticado, e a pasta onde fica o progresso de cada um.
+	UsuarioHeader string
+	DataDir       string
+	// Limite de memória somada dos labs em execução (0 = sem limite).
+	LabsMemoria int64
+
+	contasMu      sync.Mutex
+	contasAbertas map[string]*conta
+
 	labMu sync.Mutex // um start/stop por vez
 
 	seenMu   sync.Mutex
@@ -58,7 +68,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/apps/{id}/{app}/", s.appProxy)
 	mux.HandleFunc("/apps/{id}/{app}", s.appProxy)
 	mux.Handle("/", s.spa())
-	return securityHeaders(mux)
+	return securityHeaders(s.comConta(mux))
 }
 
 func securityHeaders(next http.Handler) http.Handler {
@@ -102,7 +112,10 @@ func (s *Server) find(w http.ResponseWriter, r *http.Request) (*scenario.Scenari
 		writeErr(w, http.StatusNotFound, err.Error())
 		return nil, false
 	}
-	s.touch(sc.ID)
+	if c := contaReq(r); c != nil {
+		sc.Usuario = c.Nome
+	}
+	s.touch(sc)
 	return sc, true
 }
 
@@ -143,8 +156,8 @@ func number(id string) string {
 	return n
 }
 
-func (s *Server) summarize(sc *scenario.Scenario, running map[string]bool) summary {
-	rec := s.Store.Get(sc.ID)
+func (s *Server) summarize(c *conta, sc *scenario.Scenario, running map[string]bool) summary {
+	rec := c.Store.Get(sc.ID)
 	hc := 0
 	if h, err := sc.Hints(); err == nil {
 		hc = len(h)
@@ -158,8 +171,9 @@ func (s *Server) summarize(sc *scenario.Scenario, running map[string]bool) summa
 	}
 }
 
-func runningSet() map[string]bool {
-	ids, _ := lab.Running()
+// runningSet devolve os cenários com lab em execução de um usuário.
+func runningSet(usuario string) map[string]bool {
+	ids, _ := lab.RunningFor(usuario)
 	m := map[string]bool{}
 	for _, id := range ids {
 		m[id] = true
@@ -175,11 +189,12 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	if dockerOK {
 		runtime = lab.Runtime()
 	}
-	ids, _ := lab.Running()
+	c := contaReq(r)
+	ids, _ := lab.RunningFor(c.Nome)
 	all, _ := scenario.LoadAll(s.ScenariosDir)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version": s.Version, "docker": dockerOK, "runtime": runtime,
-		"running": ids, "scenarios": len(all),
+		"running": ids, "scenarios": len(all), "usuario": c.Nome,
 	})
 }
 
@@ -189,20 +204,21 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	running := runningSet()
+	c := contaReq(r)
+	running := runningSet(c.Nome)
 	items := make([]summary, 0, len(all))
 	byID := map[string]summary{}
 	next := ""
 	resolved, totalSecs, hints, points, maxPoints := 0, 0, 0, 0, 0
 	for _, sc := range all {
-		sm := s.summarize(sc, running)
+		sm := s.summarize(c, sc, running)
 		items = append(items, sm)
 		byID[sc.ID] = sm
 		base := sc.Scoring.Base
 		if base <= 0 {
 			base = 100
 		}
-		rec := s.Store.Get(sc.ID)
+		rec := c.Store.Get(sc.ID)
 		if rec.Resolved {
 			resolved++
 			totalSecs += rec.LastSeconds
@@ -224,7 +240,7 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 		Severity string `json:"severity"`
 	}
 	var history []hist
-	for _, h := range s.Store.History() {
+	for _, h := range c.Store.History() {
 		sm, ok := byID[h.ID]
 		if !ok {
 			continue
@@ -255,7 +271,8 @@ func (s *Server) detail(w http.ResponseWriter, r *http.Request) {
 	briefing, _ := sc.ReadFile(sc.Alert.Briefing)
 	concepts, _ := sc.ReadFile(sc.Content.Concepts)
 	hints, _ := sc.Hints()
-	rec := s.Store.Get(sc.ID)
+	c := contaReq(r)
+	rec := c.Store.Get(sc.ID)
 
 	type step struct {
 		Title     string `json:"title"`
@@ -287,7 +304,7 @@ func (s *Server) detail(w http.ResponseWriter, r *http.Request) {
 		started = &ms
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"scenario":       s.summarize(sc, runningSet()),
+		"scenario":       s.summarize(c, sc, runningSet(c.Nome)),
 		"hostname":       sc.Hostname,
 		"user":           sc.User,
 		"objectives":     sc.Objectives,
@@ -306,12 +323,17 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if msg := s.bloqueadoPeloPlantao(sc.ID); msg != "" {
+	c := contaReq(r)
+	if msg := bloqueadoPeloPlantao(c, sc.ID); msg != "" {
 		writeErr(w, http.StatusConflict, msg)
 		return
 	}
 	t0 := time.Now()
 	out, err := s.subirLab(sc)
+	if errors.Is(err, ErrServidorCheio) {
+		writeErr(w, http.StatusServiceUnavailable, err.Error(), map[string]any{"cheio": true})
+		return
+	}
 	if err != nil {
 		code := -1
 		var se *scriptErr
@@ -321,7 +343,7 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error(), map[string]any{"output": out, "code": code})
 		return
 	}
-	if err := s.Store.Start(sc.ID); err != nil {
+	if err := c.Store.Start(sc.ID); err != nil {
 		log.Printf("progresso: %v", err)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "ms": time.Since(t0).Milliseconds()})
@@ -335,16 +357,20 @@ type scriptErr struct {
 func (e *scriptErr) Error() string { return e.msg }
 
 // subirLab sobe o lab do cenário com a falha injetada (setup + inject).
-// Um lab por vez: os outros são removidos.
+// Um lab por pessoa: os outros labs do mesmo usuário são removidos.
 func (s *Server) subirLab(sc *scenario.Scenario) (string, error) {
 	s.labMu.Lock()
 	defer s.labMu.Unlock()
 
-	for id := range runningSet() {
+	if !s.cabe(sc) {
+		return "", ErrServidorCheio
+	}
+	for id := range runningSet(sc.Usuario) {
 		if id == sc.ID {
 			continue
 		}
 		if other, err := scenario.Find(s.ScenariosDir, id); err == nil {
+			other.Usuario = sc.Usuario
 			_ = lab.Stop(other)
 		}
 	}
@@ -371,7 +397,7 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if s.incidenteDoPlantao(sc.ID) {
+	if incidenteDoPlantao(contaReq(r), sc.ID) {
 		writeErr(w, http.StatusConflict, "este incidente é do plantão: resolva-o ou encerre o turno")
 		return
 	}
@@ -421,6 +447,7 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items := parseCheck(out)
+	c := contaReq(r)
 	resp := map[string]any{"passed": code == 0, "items": items, "output": out, "at": time.Now().UnixMilli()}
 	if code != 0 {
 		ok := 0
@@ -438,12 +465,12 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 			resp["workaround"] = true
 			msg += " · contorno: " + strings.Join(contornos, "; ")
 		}
-		_ = s.Store.Log(sc.ID, "check", msg)
+		_ = c.Store.Log(sc.ID, "check", msg)
 	}
 	if code == 0 {
-		before := s.Store.Get(sc.ID)
+		before := c.Store.Get(sc.ID)
 		if before.StartedAt != nil || !before.Resolved {
-			rec, err := s.Store.Resolve(sc.ID, sc.Scoring.Base, sc.Scoring.TimeBonusMinutes)
+			rec, err := c.Store.Resolve(sc.ID, sc.Scoring.Base, sc.Scoring.TimeBonusMinutes)
 			if err != nil {
 				log.Printf("progresso: %v", err)
 			}
@@ -452,8 +479,8 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 				"seconds": rec.LastSeconds, "hints": rec.LastHints,
 				"points": pts, "solutionViewed": before.SolutionViewed,
 			}
-			if s.Plantao != nil {
-				if ok, err := s.Plantao.Resolver(sc.ID, pts, rec.LastHints, before.SolutionViewed); err != nil {
+			if c.Plantao != nil {
+				if ok, err := c.Plantao.Resolver(sc.ID, pts, rec.LastHints, before.SolutionViewed); err != nil {
 					log.Printf("plantão: %v", err)
 				} else if ok {
 					resp["plantao"] = true
@@ -525,12 +552,13 @@ func (s *Server) hint(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "dica inválida")
 		return
 	}
-	rec := s.Store.Get(sc.ID)
+	c := contaReq(r)
+	rec := c.Store.Get(sc.ID)
 	if n > rec.HintsUsed+1 {
 		writeErr(w, http.StatusBadRequest, "revele a dica anterior primeiro")
 		return
 	}
-	if err := s.Store.UseHint(sc.ID, n, hints[n-1].Cost); err != nil {
+	if err := c.Store.UseHint(sc.ID, n, hints[n-1].Cost); err != nil {
 		log.Printf("progresso: %v", err)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -543,9 +571,10 @@ func (s *Server) solution(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	rec := s.Store.Get(sc.ID)
+	c := contaReq(r)
+	rec := c.Store.Get(sc.ID)
 	if rec.StartedAt != nil && !rec.SolutionViewed {
-		_ = s.Store.ViewSolution(sc.ID)
+		_ = c.Store.ViewSolution(sc.ID)
 	}
 	sol, _ := sc.ReadFile(sc.Content.Solution)
 	root, _ := sc.ReadFile(sc.Content.RootCause)

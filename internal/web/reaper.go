@@ -11,13 +11,14 @@ import (
 
 // touch registra atividade num cenário. Enquanto a página do lab está aberta,
 // o monitoramento consulta a API a cada poucos segundos e mantém o lab vivo.
-func (s *Server) touch(id string) {
+// A chave é o nome do container (um lab por usuário e cenário).
+func (s *Server) touch(sc *scenario.Scenario) {
 	s.seenMu.Lock()
 	defer s.seenMu.Unlock()
 	if s.lastSeen == nil {
 		s.lastSeen = map[string]time.Time{}
 	}
-	s.lastSeen[id] = time.Now()
+	s.lastSeen[sc.ContainerName()] = time.Now()
 }
 
 // idleLabs devolve os labs parados há mais de idle. Um lab que o servidor
@@ -65,35 +66,44 @@ func (s *Server) ReapIdle(ctx context.Context, idle time.Duration) {
 }
 
 func (s *Server) reapOnce(idle time.Duration) {
-	running, err := lab.Running()
+	labs, err := lab.RunningAll()
 	if err != nil {
 		return
+	}
+	porNome := map[string]lab.Lab{}
+	nomes := make([]string, 0, len(labs))
+	for _, l := range labs {
+		n := (&scenario.Scenario{ID: l.ID, Usuario: l.Usuario}).ContainerName()
+		porNome[n] = l
+		nomes = append(nomes, n)
 	}
 	s.seenMu.Lock()
 	if s.lastSeen == nil {
 		s.lastSeen = map[string]time.Time{}
 	}
-	expired := idleLabs(running, s.lastSeen, time.Now(), idle)
+	expired := idleLabs(nomes, s.lastSeen, time.Now(), idle)
 	s.seenMu.Unlock()
 
-	for _, id := range expired {
-		if s.incidenteDoPlantao(id) {
+	for _, nome := range expired {
+		l := porNome[nome]
+		if incidenteDoPlantao(s.contaPorNome(l.Usuario), l.ID) {
 			continue // incidente de plantão aberto: o alerta pode estar tocando sem ninguém na tela
 		}
-		sc, err := scenario.Find(s.ScenariosDir, id)
+		sc, err := scenario.Find(s.ScenariosDir, l.ID)
 		if err != nil {
 			continue
 		}
+		sc.Usuario = l.Usuario
 		s.labMu.Lock()
 		err = lab.Stop(sc)
 		s.labMu.Unlock()
 		if err != nil {
-			log.Printf("limpeza: não consegui remover o lab %s: %v", id, err)
+			log.Printf("limpeza: não consegui remover o lab %s: %v", nome, err)
 			continue
 		}
 		s.seenMu.Lock()
-		delete(s.lastSeen, id)
+		delete(s.lastSeen, nome)
 		s.seenMu.Unlock()
-		log.Printf("limpeza: lab %s removido após %s sem atividade", id, idle)
+		log.Printf("limpeza: lab %s removido após %s sem atividade", nome, idle)
 	}
 }

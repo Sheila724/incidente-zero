@@ -27,7 +27,7 @@ var (
 
 func labIP(sc *scenario.Scenario) (string, error) {
 	ipMu.Lock()
-	e, ok := ipCache[sc.ID]
+	e, ok := ipCache[sc.ContainerName()]
 	ipMu.Unlock()
 	if ok && time.Now().Before(e.exp) {
 		return e.ip, nil
@@ -37,7 +37,7 @@ func labIP(sc *scenario.Scenario) (string, error) {
 		return "", err
 	}
 	ipMu.Lock()
-	ipCache[sc.ID] = ipEntry{ip, time.Now().Add(15 * time.Second)}
+	ipCache[sc.ContainerName()] = ipEntry{ip, time.Now().Add(15 * time.Second)}
 	ipMu.Unlock()
 	return ip, nil
 }

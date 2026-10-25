@@ -15,15 +15,20 @@ import (
 // ---------- agendador ----------
 
 // AgendarPlantao roda o relógio do Modo Plantão até o ctx acabar: sorteia e
-// sobe incidentes na hora certa, escala os que ninguém reconhece e encerra o turno.
+// sobe incidentes na hora certa, escala os que ninguém reconhece e encerra o
+// turno. No modo multiusuário, cuida do plantão de cada pessoa.
 func (s *Server) AgendarPlantao(ctx context.Context) {
-	if s.Plantao == nil {
+	if s.Plantao == nil && !s.multiusuario() {
 		return
 	}
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 	for {
-		s.tickPlantao()
+		for _, c := range s.contas() {
+			if c.Plantao != nil {
+				s.tickPlantao(c)
+			}
+		}
 		select {
 		case <-ctx.Done():
 			return
@@ -32,20 +37,28 @@ func (s *Server) AgendarPlantao(ctx context.Context) {
 	}
 }
 
-func (s *Server) tickPlantao() {
-	a, err := s.Plantao.Tick()
+// quem identifica a conta nos logs.
+func quem(c *conta) string {
+	if c.Nome == "" {
+		return ""
+	}
+	return " [" + c.Nome + "]"
+}
+
+func (s *Server) tickPlantao(c *conta) {
+	a, err := c.Plantao.Tick()
 	if err != nil {
-		log.Printf("plantão: %v", err)
+		log.Printf("plantão%s: %v", quem(c), err)
 	}
 	if a.Escalou != "" {
-		_ = s.Store.Log(a.Escalou, "plantao", "Escalado: alerta sem reconhecimento em 5 minutos")
-		log.Printf("plantão: incidente %s escalado", a.Escalou)
+		_ = c.Store.Log(a.Escalou, "plantao", "Escalado: alerta sem reconhecimento em 5 minutos")
+		log.Printf("plantão%s: incidente %s escalado", quem(c), a.Escalou)
 	}
 	if a.Encerrado {
-		log.Printf("plantão: turno encerrado")
+		log.Printf("plantão%s: turno encerrado", quem(c))
 	}
 	if a.Disparar {
-		s.dispararIncidente()
+		s.dispararIncidente(c)
 	}
 }
 
@@ -68,42 +81,43 @@ func (s *Server) candidatos(trilhas []string) []string {
 	return out
 }
 
-func (s *Server) dispararIncidente() {
-	turno := s.Plantao.Atual()
+func (s *Server) dispararIncidente(c *conta) {
+	turno := c.Plantao.Atual()
 	if !turno.Ativo() {
 		return
 	}
-	id := s.Plantao.Sortear(s.candidatos(turno.Trilhas))
+	id := c.Plantao.Sortear(s.candidatos(turno.Trilhas))
 	if id == "" {
-		s.Plantao.SemCenario()
+		c.Plantao.SemCenario()
 		return
 	}
 	sc, err := scenario.Find(s.ScenariosDir, id)
 	if err != nil {
-		s.Plantao.SemCenario()
+		c.Plantao.SemCenario()
 		return
 	}
-	if err := s.Plantao.Preparando(id); err != nil {
-		log.Printf("plantão: %v", err)
+	sc.Usuario = c.Nome
+	if err := c.Plantao.Preparando(id); err != nil {
+		log.Printf("plantão%s: %v", quem(c), err)
 		return
 	}
-	log.Printf("plantão: preparando o incidente %s", id)
+	log.Printf("plantão%s: preparando o incidente %s", quem(c), id)
 	go func() {
 		out, err := s.subirLab(sc)
 		if err != nil {
-			log.Printf("plantão: o lab %s não subiu: %v\n%s", id, err, ultimasLinhas(out, 15))
-			_ = s.Plantao.FalhouAoPreparar(id, err.Error())
+			log.Printf("plantão%s: o lab %s não subiu: %v\n%s", quem(c), id, err, ultimasLinhas(out, 15))
+			_ = c.Plantao.FalhouAoPreparar(id, err.Error())
 			return
 		}
-		if err := s.Store.Start(id); err != nil {
+		if err := c.Store.Start(id); err != nil {
 			log.Printf("progresso: %v", err)
 		}
-		_ = s.Store.Log(id, "plantao", "Alerta disparado no plantão")
-		s.touch(id)
-		if err := s.Plantao.Alertar(id); err != nil {
-			log.Printf("plantão: %v", err)
+		_ = c.Store.Log(id, "plantao", "Alerta disparado no plantão")
+		s.touch(sc)
+		if err := c.Plantao.Alertar(id); err != nil {
+			log.Printf("plantão%s: %v", quem(c), err)
 		}
-		log.Printf("plantão: alerta do incidente %s disparado", id)
+		log.Printf("plantão%s: alerta do incidente %s disparado", quem(c), id)
 	}()
 }
 
@@ -160,11 +174,12 @@ func (s *Server) turnoDTO(t *plantao.Turno) *turnoDTO {
 }
 
 func (s *Server) plantaoGet(w http.ResponseWriter, r *http.Request) {
-	if s.Plantao == nil {
+	c := contaReq(r)
+	if c.Plantao == nil {
 		writeErr(w, http.StatusNotFound, "Modo Plantão indisponível")
 		return
 	}
-	atual := s.Plantao.Atual()
+	atual := c.Plantao.Atual()
 	resp := map[string]any{
 		"agora":           time.Now().UnixMilli(),
 		"prazoReconhecer": int(plantao.PrazoReconhecer.Seconds()),
@@ -178,7 +193,7 @@ func (s *Server) plantaoGet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var anteriores []*turnoDTO
-	for i, t := range s.Plantao.Anteriores() {
+	for i, t := range c.Plantao.Anteriores() {
 		if i == 10 {
 			break
 		}
@@ -190,7 +205,8 @@ func (s *Server) plantaoGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) plantaoAssumir(w http.ResponseWriter, r *http.Request) {
-	if s.Plantao == nil {
+	c := contaReq(r)
+	if c.Plantao == nil {
 		writeErr(w, http.StatusNotFound, "Modo Plantão indisponível")
 		return
 	}
@@ -207,56 +223,61 @@ func (s *Server) plantaoAssumir(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "nenhum cenário nas trilhas escolhidas")
 		return
 	}
-	t, err := s.Plantao.Assumir(time.Duration(in.DuracaoMin)*time.Minute, in.Ritmo, in.Trilhas)
+	t, err := c.Plantao.Assumir(time.Duration(in.DuracaoMin)*time.Minute, in.Ritmo, in.Trilhas)
 	if err != nil {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
-	log.Printf("plantão: turno assumido (%d min, ritmo %s, trilhas %v)", in.DuracaoMin, in.Ritmo, in.Trilhas)
+	log.Printf("plantão%s: turno assumido (%d min, ritmo %s, trilhas %v)", quem(c), in.DuracaoMin, in.Ritmo, in.Trilhas)
 	writeJSON(w, http.StatusOK, map[string]any{"turno": s.turnoDTO(t)})
 }
 
 func (s *Server) plantaoEncerrar(w http.ResponseWriter, r *http.Request) {
-	if s.Plantao == nil {
+	c := contaReq(r)
+	if c.Plantao == nil {
 		writeErr(w, http.StatusNotFound, "Modo Plantão indisponível")
 		return
 	}
-	t, err := s.Plantao.Encerrar()
+	t, err := c.Plantao.Encerrar()
 	if err != nil {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
-	log.Printf("plantão: turno encerrado pela pessoa")
+	log.Printf("plantão%s: turno encerrado pela pessoa", quem(c))
 	writeJSON(w, http.StatusOK, map[string]any{"turno": s.turnoDTO(t)})
 }
 
 func (s *Server) plantaoReconhecer(w http.ResponseWriter, r *http.Request) {
-	if s.Plantao == nil {
+	c := contaReq(r)
+	if c.Plantao == nil {
 		writeErr(w, http.StatusNotFound, "Modo Plantão indisponível")
 		return
 	}
-	i, err := s.Plantao.Reconhecer()
+	i, err := c.Plantao.Reconhecer()
 	if err != nil {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
 	seg := int(i.ReconhecidoEm.Sub(*i.AlertaEm).Seconds())
-	_ = s.Store.Log(i.ID, "plantao", "Incidente reconhecido "+duracao(seg)+" depois do alerta")
-	s.touch(i.ID)
+	_ = c.Store.Log(i.ID, "plantao", "Incidente reconhecido "+duracao(seg)+" depois do alerta")
+	if sc, err := scenario.Find(s.ScenariosDir, i.ID); err == nil {
+		sc.Usuario = c.Nome
+		s.touch(sc)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"incidente": s.incidenteDTO(*i)})
 }
 
-// incidenteDoPlantao informa se o cenário é o incidente aberto do plantão.
-func (s *Server) incidenteDoPlantao(id string) bool {
-	return s.Plantao != nil && s.Plantao.IncidenteAtual() == id
+// incidenteDoPlantao informa se o cenário é o incidente aberto do plantão da conta.
+func incidenteDoPlantao(c *conta, id string) bool {
+	return c != nil && c.Plantao != nil && c.Plantao.IncidenteAtual() == id
 }
 
 // bloqueadoPeloPlantao impede abrir outro lab enquanto há um incidente de plantão aberto.
-func (s *Server) bloqueadoPeloPlantao(id string) string {
-	if s.Plantao == nil {
+func bloqueadoPeloPlantao(c *conta, id string) string {
+	if c == nil || c.Plantao == nil {
 		return ""
 	}
-	atual := s.Plantao.IncidenteAtual()
+	atual := c.Plantao.IncidenteAtual()
 	if atual == "" || atual == id {
 		return ""
 	}

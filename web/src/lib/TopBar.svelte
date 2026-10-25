@@ -37,7 +37,13 @@
       {emIncidente ? 'incidente aberto' : `de plantão até ${fimTurno}`}
     </a>
   {/if}
-  <a class="gh" href="https://github.com/Sheila724/incidente-zero" target="_blank" rel="noopener noreferrer" aria-label="Código no GitHub" title="Código no GitHub">
+  {#if status?.usuario}
+    <span class="usuario mono" title="Você entrou como {status.usuario}">
+      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+      {status.usuario}
+    </span>
+  {/if}
+  <a class="gh" class:sem-usuario={!status?.usuario} href="https://github.com/Sheila724/incidente-zero" target="_blank" rel="noopener noreferrer" aria-label="Código no GitHub" title="Código no GitHub">
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.3-1.69-1.3-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.4-5.26 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"></path></svg>
   </a>
   <div class="engine mono" title="Motor dos labs">
@@ -69,7 +75,9 @@
   .turno.incidente { color: #F9A9AD; border-color: var(--red-line); background: var(--red-soft); }
   .tdot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: vivo 2s ease-in-out infinite; }
   @keyframes vivo { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-  .gh { margin-left: auto; color: var(--muted); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; }
+  .usuario { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+  .gh.sem-usuario { margin-left: auto; }
+  .gh { color: var(--muted); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; }
   .gh:hover { color: var(--text); background: var(--chip); }
   .engine {
     display: flex; align-items: center; gap: 8px; font-size: 12px;

@@ -71,6 +71,8 @@ type App struct {
 }
 
 type Scenario struct {
+	// Usuario dono do lab (modo multiusuário do iz ui); vazio no uso local.
+	Usuario          string       `yaml:"-"`
 	ID               string       `yaml:"id"`
 	Title            string       `yaml:"title"`
 	Level            string       `yaml:"level"`
@@ -103,8 +105,12 @@ func (s *Scenario) Path(rel string) string {
 	return filepath.Join(s.Dir, rel)
 }
 
-// ContainerName é o nome do container do lab.
+// ContainerName é o nome do container do lab. Com vários usuários na mesma
+// interface, cada um tem o seu lab: iz-<usuário>-<cenário>.
 func (s *Scenario) ContainerName() string {
+	if s.Usuario != "" {
+		return "iz-" + s.Usuario + "-" + s.ID
+	}
 	return "iz-" + s.ID
 }
 
